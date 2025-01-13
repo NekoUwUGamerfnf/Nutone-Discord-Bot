@@ -372,6 +372,7 @@ async def gamename(interaction: discord.Interaction, user: discord.User = None):
 
     guild_id = str(interaction.guild.id)
     ephemeral = hidden_status.get(guild_id, True)
+    await interaction.response.defer(ephemeral=ephemeral)
 
     if user is None:
         discord_user = str(interaction.user)

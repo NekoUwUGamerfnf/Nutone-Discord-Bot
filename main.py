@@ -547,7 +547,7 @@ async def invite(interaction: discord.Interaction):
     button = discord.ui.Button(label="⊕ Add App", url=invite_link, style=discord.ButtonStyle.link)
     view.add_item(button)
     
-    await interaction.response.send_message(embed=embed, view=view, ephemeral=ephemeral)
+    await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
 
 @client.tree.command(name="add_server_id", description="Associate a server-specific ID with this Discord server")
 async def add_server_id(interaction: discord.Interaction, server_id: str):

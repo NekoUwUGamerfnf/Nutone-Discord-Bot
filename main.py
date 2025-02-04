@@ -325,6 +325,9 @@ async def uid(interaction: discord.Interaction, player: str = None):
 @app_commands.allowed_contexts(guilds=True, dms=False, private_channels=True)
 @client.tree.command(name="link", description="Link a game username to your Discord account")
 async def link(interaction: discord.Interaction, game_username: str):
+    if not interaction.guild:
+        await interaction.response.send_message("This command can only be used in a server.", ephemeral=True)
+        return
     await interaction.response.defer(ephemeral=True)
     discord_user = str(interaction.user)
     ephemeral = hidden_status.get(str(interaction.guild.id), True)
@@ -362,6 +365,9 @@ async def link(interaction: discord.Interaction, game_username: str):
 @app_commands.allowed_contexts(guilds=True, dms=False, private_channels=True)
 @client.tree.command(name="unlink", description="Unlink the linked game username from your Discord account")
 async def unlink(interaction: discord.Interaction):
+    if not interaction.guild:
+        await interaction.response.send_message("This command can only be used in a server.", ephemeral=True)
+        return
     await interaction.response.defer(ephemeral=True)
     discord_user = str(interaction.user)
     ephemeral = hidden_status.get(str(interaction.guild.id), True)
@@ -447,6 +453,9 @@ async def roll(interaction: discord.Interaction, number: int = None):
 @app_commands.allowed_contexts(guilds=True, dms=False, private_channels=True)
 @client.tree.command(name="ping", description="Check the bot's latency")
 async def ping(interaction: discord.Interaction):
+    if not interaction.guild:
+        await interaction.response.send_message("This command can only be used in a server.", ephemeral=True)
+        return
     latency = client.latency
     guild_id = str(interaction.guild.id)
     ephemeral = hidden_status.get(guild_id, True)
@@ -457,6 +466,9 @@ async def ping(interaction: discord.Interaction):
 @app_commands.allowed_contexts(guilds=True, dms=False, private_channels=True)
 @client.tree.command(name="help", description="Show the help message with available commands")
 async def help(interaction: discord.Interaction):
+    if not interaction.guild:
+        await interaction.response.send_message("This command can only be used in a server.", ephemeral=True)
+        return
     embed = discord.Embed(
         title="Help - Available Commands",
         color=discord.Color.green()
@@ -555,6 +567,9 @@ async def help(interaction: discord.Interaction):
 @app_commands.allowed_contexts(guilds=True, dms=False, private_channels=True)
 @client.tree.command(name="invite", description="Get the invite link to the server")
 async def invite(interaction: discord.Interaction):
+    if not interaction.guild:
+        await interaction.response.send_message("This command can only be used in a server.", ephemeral=True)
+        return
     guild_id = str(interaction.guild.id)
     ephemeral = hidden_status.get(guild_id, True)
     

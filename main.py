@@ -609,6 +609,8 @@ async def add_server_id(interaction: discord.Interaction, server_id: str):
     else:
         await interaction.response.send_message(f'Server-specific ID "{server_id}" is already associated with this Discord server.', ephemeral=hidden_status.get(str(interaction.guild.id), True))
 
+@app_commands.allowed_installs(guilds=True, users=True)
+@app_commands.allowed_contexts(guilds=True, dms=False, private_channels=True)
 @client.tree.command(name="remove_server_id", description="Remove a server-specific ID from this Discord server")
 async def remove_server_id(interaction: discord.Interaction, server_id: str):
     if not interaction.guild:

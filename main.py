@@ -699,7 +699,7 @@ async def setadminrole(interaction: discord.Interaction, role: discord.Role):
         return
 
     if not is_nutone_contributor:
-        await interaction.response.send_message("Only the server owner or nutone contributors can use this command.", ephemeral=True)
+        await interaction.response.send_message("Only the server owner and nutone contributors can use this command.", ephemeral=True)
         return
 
     guild_id = str(interaction.guild.id)

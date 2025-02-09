@@ -89,8 +89,8 @@ async def on_ready():
 status_index = 0
 statuses = [
     lambda total_members, total_guilds: discord.Game(name=f"I'm looking at the stats of {total_members} discord users and in {total_guilds} discord servers"),
-    lambda total_members, total_guilds: discord.Game(name="Streaming Stats of players to https://nutone.okudai.dev"),
-    lambda total_members, total_guilds: discord.Game(name="Watching Stats of players on https://nutone.okudai.dev")
+    lambda total_members, total_guilds: discord.Game(name="Sending Stats of players to https://nutone.okudai.dev"),
+    lambda total_members, total_guilds: discord.Game(name="Looking at Stats of players on https://nutone.okudai.dev")
 ]
 
 @tasks.loop(minutes=1)
@@ -118,21 +118,28 @@ async def on_guild_join(guild):
 async def on_command_error(ctx, error):
     await ctx.send(f'An error occurred: {error}', ephemeral=True)
 
-def is_admin(ctx):
+def is_nutone_contributor(ctx):
+    if ctx.guild.owner_id == ctx.user.id:
+        return True
+    if str(ctx.user) == "fvnkhead":
+        return True
     if str(ctx.user) == "okudai":
         return True
     if str(ctx.user) == "nekouwugamerfnf":
         return True
+    return False
+
+def is_admin(ctx):
     guild_id = str(ctx.guild.id)
     role_id = admin_roles.get(guild_id)
     if role_id and any(role.id == role_id for role in ctx.user.roles):
         return True
-    if ctx.guild.owner_id == ctx.user.id:
+    if is_nutone_contributor:
         return True
     return False
 
 async def fetch_stats(interaction, player, server_id, ephemeral):
-    if server_id == "world wide":
+    if server_id == "All":
         url = f'https://nutone.okudai.dev/players/{player}'
     else:
         url = f'https://nutone.okudai.dev/players/{player}?server_id={server_id}'
@@ -192,7 +199,7 @@ async def fetch_uid(interaction, player, ephemeral):
 
 @app_commands.allowed_installs(guilds=True, users=True)
 @app_commands.allowed_contexts(guilds=True, dms=False, private_channels=True)
-@client.tree.command(name="stats", description="Search for a player's stats worldwide or by server")
+@client.tree.command(name="stats", description="Search for a player's stats on all servers or by server")
 async def stats(interaction: discord.Interaction, player: str = None, server_id: str = None):
     if not interaction.guild:
         await interaction.response.send_message("This command can only be used in a server.", ephemeral=True)
@@ -208,7 +215,7 @@ async def stats(interaction: discord.Interaction, player: str = None, server_id:
         player = linked_usernames.get(discord_user, temp_usernames.get(discord_user, discord_user))
 
     load_data()
-    available_server_ids = server_ids.get(guild_id, []) + ["world wide"]
+    available_server_ids = server_ids.get(guild_id, []) + ["All"]
 
     if server_id:
         data = await fetch_stats(interaction, player, server_id, ephemeral)
@@ -264,7 +271,7 @@ async def kd(interaction: discord.Interaction, player: str = None, server_id: st
         player = linked_usernames.get(discord_user, temp_usernames.get(discord_user, discord_user))
 
     load_data()
-    available_server_ids = server_ids.get(guild_id, []) + ["world wide"]
+    available_server_ids = server_ids.get(guild_id, []) + ["All"]
 
     if server_id:
         data = await fetch_stats(interaction, player, server_id, ephemeral)
@@ -426,7 +433,7 @@ async def gamename(interaction: discord.Interaction, user: discord.User = None):
 
 @app_commands.allowed_installs(guilds=True, users=True)
 @app_commands.allowed_contexts(guilds=True, dms=False, private_channels=True)
-@client.tree.command(name="roll", description="Roll a number between 10 and 100")
+@client.tree.command(name="roll", description="Roll a number between 1 and 100")
 async def roll(interaction: discord.Interaction, number: int = None):
     if not interaction.guild:
         await interaction.response.send_message("This command can only be used in a server.", ephemeral=True)
@@ -438,8 +445,8 @@ async def roll(interaction: discord.Interaction, number: int = None):
     if number is None:
         max_number = 100
     else:
-        if number < 10:
-            await interaction.response.send_message("Number must be at least 10.", ephemeral=True)
+        if number < 1:
+            await interaction.response.send_message("Number must be at least 1.", ephemeral=True)
             return
         elif number > 100:
             await interaction.response.send_message("Number must be at most 100.", ephemeral=True)
@@ -475,7 +482,7 @@ async def help(interaction: discord.Interaction):
     )
     embed.add_field(
         name="/stats [player] [server_id]",
-        value="Search for a player's stats worldwide or by server. If no player is specified, it will use your linked username or Discord username. Optionally specify a server ID.",
+        value="Search for a player's stats on all servers or by server. If no player is specified, it will use your linked username or Discord username. Optionally specify a server ID.",
         inline=False
     )
     embed.add_field(
@@ -485,12 +492,12 @@ async def help(interaction: discord.Interaction):
     )
     embed.add_field(
         name="/uid [player]",
-        value="Get the UID of a linked game username on 'world wide'. If no player is specified, it will use your linked username or Discord username.",
+        value="Get the UID of a linked game username on 'All' the servers. If no player is specified, it will use your linked username or Discord username.",
         inline=False
     )
     embed.add_field(
         name="/roll [number]",
-        value="Roll a number between 10 and 100. Default is 1 to 100.",
+        value="Roll a number between 1 and 100.",
         inline=False
     )
     embed.add_field(
@@ -506,11 +513,6 @@ async def help(interaction: discord.Interaction):
     embed.add_field(
         name="/help",
         value="Show this help message with available commands.",
-        inline=False
-    )
-    embed.add_field(
-        name="/invite",
-        value="Get the invite link to the server.",
         inline=False
     )
     embed.add_field(
@@ -540,17 +542,17 @@ async def help(interaction: discord.Interaction):
     )
     embed.add_field(
         name="/server_id",
-        value="Display the current server IDs being used. Always includes 'world wide'.",
+        value="Display the current server IDs being used. Always includes 'All'.",
         inline=False
     )
     embed.add_field(
         name="/hidden",
-        value="Hide the bot's messages from everyone. Only the server owner or 'nekouwugamerfnf' can use this command.",
+        value="Hide the bot's messages from everyone. Only the server owner can use this command.",
         inline=False
     )
     embed.add_field(
         name="/unhidden",
-        value="Unhide the bot's messages from everyone. Only the server owner or 'nekouwugamerfnf' can use this command.",
+        value="Unhide the bot's messages from everyone. Only the server owner can use this command.",
         inline=False
     )
     embed.add_field(
@@ -562,29 +564,6 @@ async def help(interaction: discord.Interaction):
     guild_id = str(interaction.guild.id)
     ephemeral = hidden_status.get(guild_id, True)
     await interaction.response.send_message(embed=embed, ephemeral=ephemeral)
-
-@app_commands.allowed_installs(guilds=True, users=True)
-@app_commands.allowed_contexts(guilds=True, dms=False, private_channels=True)
-@client.tree.command(name="invite", description="Get the invite link to the server")
-async def invite(interaction: discord.Interaction):
-    if not interaction.guild:
-        await interaction.response.send_message("This command can only be used in a server.", ephemeral=True)
-        return
-    guild_id = str(interaction.guild.id)
-    ephemeral = hidden_status.get(guild_id, True)
-    
-    invite_link = "https://discord.com/oauth2/authorize?client_id=1250221553166319719"
-    embed = discord.Embed(
-        title="Invite Nutone API",
-        description="Click the button below to add Nutone API to your server.",
-        color=discord.Color.blue()
-    )
-    
-    view = discord.ui.View()
-    button = discord.ui.Button(label="⊕ Add App", url=invite_link, style=discord.ButtonStyle.link)
-    view.add_item(button)
-    
-    await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
 
 @app_commands.allowed_installs(guilds=True, users=True)
 @app_commands.allowed_contexts(guilds=True, dms=False, private_channels=True)
@@ -616,7 +595,7 @@ async def remove_server_id(interaction: discord.Interaction, server_id: str):
     if not interaction.guild:
         await interaction.response.send_message("This command can only be used in a server.", ephemeral=hidden_status.get(str(interaction.guild.id), True))
         return
-
+    
     if not is_admin(interaction):
         await interaction.response.send_message("You do not have permission to use this command.", ephemeral=hidden_status.get(str(interaction.guild.id), True))
         return
@@ -640,7 +619,7 @@ async def server_id(interaction: discord.Interaction):
 
     guild_id = str(interaction.guild.id)
     load_data()
-    ids = server_ids.get(guild_id, []) + ["world wide"]
+    ids = server_ids.get(guild_id, []) + ["All"]
     await interaction.response.send_message(f'The current server IDs being used are: {", ".join(ids)}', ephemeral=hidden_status.get(str(interaction.guild.id), True))
 
 @app_commands.allowed_installs(guilds=True, users=True)
@@ -719,8 +698,8 @@ async def setadminrole(interaction: discord.Interaction, role: discord.Role):
         await interaction.response.send_message("This command can only be used in a server.", ephemeral=True)
         return
 
-    if interaction.guild.owner_id != interaction.user.id:
-        await interaction.response.send_message("Only the server owner can use this command.", ephemeral=True)
+    if not is_nutone_contributor:
+        await interaction.response.send_message("Only the server owner or nutone contributors can use this command.", ephemeral=True)
         return
 
     guild_id = str(interaction.guild.id)
@@ -771,7 +750,7 @@ async def kduser(interaction: discord.Interaction, user: discord.User, server_id
     player = linked_usernames.get(discord_user, temp_usernames.get(discord_user, discord_user))
 
     load_data()
-    available_server_ids = server_ids.get(guild_id, []) + ["world wide"]
+    available_server_ids = server_ids.get(guild_id, []) + ["All"]
 
     if server_id:
         data = await fetch_stats(interaction, player, server_id, ephemeral)

@@ -475,7 +475,7 @@ async def username(interaction: discord.Interaction, user: discord.User = None):
             else:
                 username = "N/A"
 
-    await interaction.followup.send(f'Discord Username: {discord_user}\nGame Username: {username}', ephemeral=ephemeral)
+    await interaction.followup.send(f'Discord Username: {discord_user}\nUsername: {username}', ephemeral=ephemeral)
 
 @app_commands.allowed_installs(guilds=True, users=True)
 @app_commands.allowed_contexts(guilds=True, dms=False, private_channels=True)
@@ -765,7 +765,7 @@ async def uiduser(interaction: discord.Interaction, user: discord.User):
             linked_uids[player] = uid
             save_data()
 
-    await interaction.followup.send(f'Discord User: {discord_user}\nGame Username: {player}\nUID: {uid}', ephemeral=ephemeral)
+    await interaction.followup.send(f'Discord User: {discord_user}\nUsername: {player}\nUID: {uid}', ephemeral=ephemeral)
 
 @app_commands.allowed_installs(guilds=True, users=True)
 @app_commands.allowed_contexts(guilds=True, dms=False, private_channels=True)

@@ -14,26 +14,22 @@ load_dotenv()
 TOKEN = os.getenv("DISCORD_TOKEN")
 
 
-LINKED_USERNAMES_PATH = "/home/neko/discord-bots/nutone/linked_usernames.json"
-SERVER_IDS_PATH = "/home/neko/discord-bots/nutone/server_ids.json"
-LINKED_UIDS_PATH = "/home/neko/discord-bots/nutone/linked_uids.json"
-VALID_USERNAMES_PATH = "/home/neko/discord-bots/nutone/valid_usernames.json"
-TEMP_USERNAMES_PATH = "/home/neko/discord-bots/nutone/temp_usernames.json"
-HIDDEN_PATH = "/home/neko/discord-bots/nutone/hidden.json"
-ADMIN_ROLE_PATH = "/home/neko/discord-bots/nutone/admin_role.json"
+LINKED_USERNAMES_PATH = "/nutone/linked_usernames.json"
+SERVER_IDS_PATH = "/nutone/server_ids.json"
+LINKED_UIDS_PATH = "/nutone/linked_uids.json"
+VALID_USERNAMES_PATH = "/nutone/valid_usernames.json"
+HIDDEN_PATH = "/nutone/hidden.json"
 
 
 linked_usernames = {}
 server_ids = {}
 linked_uids = {}
 valid_usernames = {}
-temp_usernames = {}
 hidden_status = {}
-admin_roles = {}
 
 
 def load_data():
-    global linked_usernames, server_ids, linked_uids, valid_usernames, temp_usernames, hidden_status, admin_roles
+    global linked_usernames, server_ids, linked_uids, valid_usernames, hidden_status
     if os.path.exists(LINKED_USERNAMES_PATH):
         with open(LINKED_USERNAMES_PATH, 'r') as f:
             linked_usernames.update(json.load(f))
@@ -46,15 +42,9 @@ def load_data():
     if os.path.exists(VALID_USERNAMES_PATH):
         with open(VALID_USERNAMES_PATH, 'r') as f:
             valid_usernames.update(json.load(f))
-    if os.path.exists(TEMP_USERNAMES_PATH):
-        with open(TEMP_USERNAMES_PATH, 'r') as f:
-            temp_usernames.update(json.load(f))
     if os.path.exists(HIDDEN_PATH):
         with open(HIDDEN_PATH, 'r') as f:
             hidden_status.update(json.load(f))
-    if os.path.exists(ADMIN_ROLE_PATH):
-        with open(ADMIN_ROLE_PATH, 'r') as f:
-            admin_roles.update(json.load(f))
 
 
 def save_data():
@@ -66,23 +56,14 @@ def save_data():
         json.dump(linked_uids, f)
     with open(VALID_USERNAMES_PATH, 'w') as f:
         json.dump(valid_usernames, f)
-    with open(TEMP_USERNAMES_PATH, 'w') as f:
-        json.dump(temp_usernames, f)
     with open(HIDDEN_PATH, 'w') as f:
         json.dump(hidden_status, f)
-    with open(ADMIN_ROLE_PATH, 'w') as f:
-        json.dump(admin_roles, f)
 
-
-def delete_temp_usernames():
-    if os.path.exists(TEMP_USERNAMES_PATH):
-        os.remove(TEMP_USERNAMES_PATH)
 
 @client.event
 async def on_ready():
     print(f'Bot is ready. Logged in as {client.user}')
     load_data()
-    delete_temp_usernames()
     await client.tree.sync()
     update_status.start()
 
@@ -119,8 +100,6 @@ async def on_command_error(ctx, error):
     await ctx.send(f'An error occurred: {error}', ephemeral=True)
 
 def is_nutone_contributor(ctx):
-    if ctx.guild.owner_id == ctx.user.id:
-        return True
     if str(ctx.user) == "fvnkhead":
         return True
     if str(ctx.user) == "okudai":
@@ -130,9 +109,7 @@ def is_nutone_contributor(ctx):
     return False
 
 def is_admin(ctx):
-    guild_id = str(ctx.guild.id)
-    role_id = admin_roles.get(guild_id)
-    if role_id and any(role.id == role_id for role in ctx.user.roles):
+    if ctx.guild.owner_id == ctx.user.id:
         return True
     if is_nutone_contributor:
         return True
@@ -212,7 +189,7 @@ async def stats(interaction: discord.Interaction, player: str = None, server_id:
 
     if player is None:
         discord_user = str(interaction.user)
-        player = linked_usernames.get(discord_user, temp_usernames.get(discord_user, discord_user))
+        player = linked_usernames.get(discord_user)
 
     load_data()
     available_server_ids = server_ids.get(guild_id, []) + ["All"]
@@ -255,7 +232,7 @@ async def stats(interaction: discord.Interaction, player: str = None, server_id:
 
 @app_commands.allowed_installs(guilds=True, users=True)
 @app_commands.allowed_contexts(guilds=True, dms=False, private_channels=True)
-@client.tree.command(name="kd", description="Get the K/D ratio of a linked game username")
+@client.tree.command(name="kd", description="Get the K/D ratio of a linked username")
 async def kd(interaction: discord.Interaction, player: str = None, server_id: str = None):
     if not interaction.guild:
         await interaction.response.send_message("This command can only be used in a server.", ephemeral=True)
@@ -268,7 +245,7 @@ async def kd(interaction: discord.Interaction, player: str = None, server_id: st
 
     if player is None:
         discord_user = str(interaction.user)
-        player = linked_usernames.get(discord_user, temp_usernames.get(discord_user, discord_user))
+        player = linked_usernames.get(discord_user)
 
     load_data()
     available_server_ids = server_ids.get(guild_id, []) + ["All"]
@@ -303,7 +280,7 @@ async def kd(interaction: discord.Interaction, player: str = None, server_id: st
 
 @app_commands.allowed_installs(guilds=True, users=True)
 @app_commands.allowed_contexts(guilds=True, dms=False, private_channels=True)
-@client.tree.command(name="uid", description="Get the UID of a linked game username")
+@client.tree.command(name="uid", description="Get the UID of a linked username")
 async def uid(interaction: discord.Interaction, player: str = None):
     if not interaction.guild:
         await interaction.response.send_message("This command can only be used in a server.", ephemeral=True)
@@ -316,7 +293,7 @@ async def uid(interaction: discord.Interaction, player: str = None):
 
     if player is None:
         discord_user = str(interaction.user)
-        player = linked_usernames.get(discord_user, temp_usernames.get(discord_user, discord_user))
+        player = linked_usernames.get(discord_user)
 
     if player in linked_uids:
         uid = linked_uids[player]
@@ -326,12 +303,12 @@ async def uid(interaction: discord.Interaction, player: str = None):
             linked_uids[player] = uid
             save_data()
 
-    await interaction.followup.send(f'Game Username: {player}\nUID: {uid}', ephemeral=ephemeral)
+    await interaction.followup.send(f'Username: {player}\nUID: {uid}', ephemeral=ephemeral)
 
 @app_commands.allowed_installs(guilds=True, users=True)
 @app_commands.allowed_contexts(guilds=True, dms=False, private_channels=True)
-@client.tree.command(name="link", description="Link a game username to your Discord account")
-async def link(interaction: discord.Interaction, game_username: str):
+@client.tree.command(name="link", description="Link a username to your Discord account")
+async def link(interaction: discord.Interaction, username: str):
     if not interaction.guild:
         await interaction.response.send_message("This command can only be used in a server.", ephemeral=True)
         return
@@ -339,11 +316,11 @@ async def link(interaction: discord.Interaction, game_username: str):
     discord_user = str(interaction.user)
     ephemeral = hidden_status.get(str(interaction.guild.id), True)
 
-    if game_username in valid_usernames:
+    if username in valid_usernames:
         valid = True
-        uid = linked_uids.get(game_username, 'N/A')
+        uid = linked_uids.get(username, 'N/A')
     else:
-        url = f'https://nutone.okudai.dev/players/{game_username}'
+        url = f'https://nutone.okudai.dev/players/{username}'
         try:
             r = requests.get(url)
             r.raise_for_status()
@@ -355,22 +332,21 @@ async def link(interaction: discord.Interaction, game_username: str):
             return
 
         if valid:
-            uid = await fetch_uid(interaction, game_username, ephemeral)
+            uid = await fetch_uid(interaction, username, ephemeral)
             if uid != 'N/A':
-                linked_uids[game_username] = uid
-            valid_usernames[game_username] = valid
+                linked_uids[username] = uid
+            valid_usernames[username] = valid
 
-    linked_usernames[discord_user] = game_username
-    temp_usernames[discord_user] = game_username
+    linked_usernames[discord_user] = username
     save_data()
-    message = f'Game username "{game_username}" linked to Discord account "{discord_user}".'
+    message = f'Username "{username}" linked to Discord account "{discord_user}".'
     if not valid:
         message += " However, the username is not valid on Nutone."
     await interaction.followup.send(message, ephemeral=ephemeral)
 
 @app_commands.allowed_installs(guilds=True, users=True)
 @app_commands.allowed_contexts(guilds=True, dms=False, private_channels=True)
-@client.tree.command(name="unlink", description="Unlink the linked game username from your Discord account")
+@client.tree.command(name="unlink", description="Unlink the linked username from your Discord account")
 async def unlink(interaction: discord.Interaction):
     if not interaction.guild:
         await interaction.response.send_message("This command can only be used in a server.", ephemeral=True)
@@ -380,19 +356,89 @@ async def unlink(interaction: discord.Interaction):
     ephemeral = hidden_status.get(str(interaction.guild.id), True)
 
     if discord_user in linked_usernames:
-        game_username = linked_usernames[discord_user]
+        username = linked_usernames[discord_user]
         del linked_usernames[discord_user]
-        if game_username in linked_uids:
-            del linked_uids[game_username]
+        if username in linked_uids:
+            del linked_uids[username]
         save_data()
-        await interaction.followup.send(f'Unlinked the game username "{game_username}" from Discord account "{discord_user}".', ephemeral=ephemeral)
+        await interaction.followup.send(f'Unlinked the username "{username}" from Discord account "{discord_user}".', ephemeral=ephemeral)
     else:
-        await interaction.followup.send(f'No game username is linked to your Discord account "{discord_user}".', ephemeral=ephemeral)
+        await interaction.followup.send(f'No username is linked to your Discord account "{discord_user}".', ephemeral=ephemeral)
 
 @app_commands.allowed_installs(guilds=True, users=True)
 @app_commands.allowed_contexts(guilds=True, dms=False, private_channels=True)
-@client.tree.command(name="gamename", description="Show the linked game username and your Discord account username")
-async def gamename(interaction: discord.Interaction, user: discord.User = None):
+@client.tree.command(name="forcelink", description="Nutone contributor only command")
+async def forcelink(interaction: discord.Interaction, username: str, user: discord.User = None):
+    if not interaction.guild:
+        await interaction.response.send_message("This command can only be used in a server.", ephemeral=True)
+        return
+
+    if not is_nutone_contributor(interaction):
+        await interaction.response.send_message("You do not have permission to use this command.", ephemeral=hidden_status.get(str(interaction.guild.id), True))
+        return
+
+    await interaction.response.defer(ephemeral=True)
+    discord_user = str(user)
+    ephemeral = hidden_status.get(str(interaction.guild.id), True)
+
+    if username in valid_usernames:
+        valid = True
+        uid = linked_uids.get(username, 'N/A')
+    else:
+        url = f'https://nutone.okudai.dev/players/{username}'
+        try:
+            r = requests.get(url)
+            r.raise_for_status()
+            valid = True
+        except requests.exceptions.HTTPError:
+            valid = False
+        except requests.exceptions.RequestException:
+            await interaction.followup.send("An error occurred while checking the username validity.", ephemeral=ephemeral)
+            return
+
+        if valid:
+            uid = await fetch_uid(interaction, username, ephemeral)
+            if uid != 'N/A':
+                linked_uids[username] = uid
+            valid_usernames[username] = valid
+
+    linked_usernames[discord_user] = username
+    save_data()
+    message = f'Username "{username}" linked to Discord account "{discord_user}".'
+    if not valid:
+        message += " However, the username is not valid on Nutone."
+    await interaction.followup.send(message, ephemeral=ephemeral)
+
+@app_commands.allowed_installs(guilds=True, users=True)
+@app_commands.allowed_contexts(guilds=True, dms=False, private_channels=True)
+@client.tree.command(name="forceunlink", description="Nutone contributor only command")
+async def forceunlink(interaction: discord.Interaction, user: discord.User = None):
+    if not interaction.guild:
+        await interaction.response.send_message("This command can only be used in a server.", ephemeral=True)
+        return
+
+    if not is_nutone_contributor(interaction):
+        await interaction.response.send_message("You do not have permission to use this command.", ephemeral=hidden_status.get(str(interaction.guild.id), True))
+        return
+
+    await interaction.response.defer(ephemeral=True)
+    discord_user = str(user)
+    ephemeral = hidden_status.get(str(interaction.guild.id), True)
+
+    if discord_user in linked_usernames:
+        username = linked_usernames[discord_user]
+        del linked_usernames[discord_user]
+        if username in linked_uids:
+            del linked_uids[username]
+        save_data()
+        await interaction.followup.send(f'Unlinked the username "{username}" from Discord account "{discord_user}".', ephemeral=ephemeral)
+    else:
+        await interaction.followup.send(f'No username is linked to your Discord account "{discord_user}".', ephemeral=ephemeral)
+
+@app_commands.allowed_installs(guilds=True, users=True)
+@app_commands.allowed_contexts(guilds=True, dms=False, private_channels=True)
+@client.tree.command(name="username", description="Show the linked username and your Discord account username")
+async def username(interaction: discord.Interaction, user: discord.User = None):
     if not interaction.guild:
         await interaction.response.send_message("This command can only be used in a server.", ephemeral=True)
         return
@@ -406,10 +452,10 @@ async def gamename(interaction: discord.Interaction, user: discord.User = None):
     else:
         discord_user = str(user)
 
-    game_username = linked_usernames.get(discord_user, temp_usernames.get(discord_user, None))
-    if not game_username:
+    username = linked_usernames.get(discord_user)
+    if not username:
         if discord_user in valid_usernames:
-            game_username = discord_user
+            username = discord_user
         else:
             url = f'https://nutone.okudai.dev/players/{discord_user}'
             try:
@@ -424,12 +470,12 @@ async def gamename(interaction: discord.Interaction, user: discord.User = None):
 
             if valid:
                 valid_usernames[discord_user] = True
-                game_username = discord_user
+                username = discord_user
                 save_data()
             else:
-                game_username = "N/A"
+                username = "N/A"
 
-    await interaction.followup.send(f'Discord Username: {discord_user}\nGame Username: {game_username}', ephemeral=ephemeral)
+    await interaction.followup.send(f'Discord Username: {discord_user}\nGame Username: {username}', ephemeral=ephemeral)
 
 @app_commands.allowed_installs(guilds=True, users=True)
 @app_commands.allowed_contexts(guilds=True, dms=False, private_channels=True)
@@ -487,12 +533,12 @@ async def help(interaction: discord.Interaction):
     )
     embed.add_field(
         name="/kd [player] [server_id]",
-        value="Get the K/D ratio of a linked game username. If no player is specified, it will use your linked username or Discord username. Optionally specify a server ID.",
+        value="Get the K/D ratio of a linked username. If no player is specified, it will use your linked username or Discord username. Optionally specify a server ID.",
         inline=False
     )
     embed.add_field(
         name="/uid [player]",
-        value="Get the UID of a linked game username on 'All' the servers. If no player is specified, it will use your linked username or Discord username.",
+        value="Get the UID of a linked username on 'All' the servers. If no player is specified, it will use your linked username or Discord username.",
         inline=False
     )
     embed.add_field(
@@ -516,18 +562,28 @@ async def help(interaction: discord.Interaction):
         inline=False
     )
     embed.add_field(
-        name="/link [game_username]",
-        value="Link a game username to your Discord account.",
+        name="/link [username]",
+        value="Link a username to your Discord account.",
         inline=False
     )
     embed.add_field(
         name="/unlink",
-        value="Unlink the linked game username from your Discord account.",
+        value="Unlink the linked username from your Discord account.",
         inline=False
     )
     embed.add_field(
-        name="/gamename [user]",
-        value="Show the linked game username and your Discord account username. Optionally specify a user to see their linked game username.",
+        name="/forcelink [username]",
+        value="Nutone contributor only command.",
+        inline=False
+    )
+    embed.add_field(
+        name="/forceunlink",
+        value="Nutone contributor only command.",
+        inline=False
+    )
+    embed.add_field(
+        name="/username [user]",
+        value="Show the linked username and your Discord account username. Optionally specify a user to see their linked username.",
         inline=False
     )
     embed.add_field(
@@ -553,11 +609,6 @@ async def help(interaction: discord.Interaction):
     embed.add_field(
         name="/unhidden",
         value="Unhide the bot's messages from everyone. Only the server owner can use this command.",
-        inline=False
-    )
-    embed.add_field(
-        name="/setadminrole [role]",
-        value="Set a role that can use admin commands. Only the server owner can use this command.",
         inline=False
     )
 
@@ -692,23 +743,6 @@ async def unhidden(interaction: discord.Interaction):
 
 @app_commands.allowed_installs(guilds=True, users=True)
 @app_commands.allowed_contexts(guilds=True, dms=False, private_channels=True)
-@client.tree.command(name="setadminrole", description="Set a role that can use admin commands")
-async def setadminrole(interaction: discord.Interaction, role: discord.Role):
-    if not interaction.guild:
-        await interaction.response.send_message("This command can only be used in a server.", ephemeral=True)
-        return
-
-    if not is_nutone_contributor:
-        await interaction.response.send_message("Only the server owner and nutone contributors can use this command.", ephemeral=True)
-        return
-
-    guild_id = str(interaction.guild.id)
-    admin_roles[guild_id] = role.id
-    save_data()
-    await interaction.response.send_message(f'The role "{role.name}" is now set as the admin role for this server.', ephemeral=True)
-
-@app_commands.allowed_installs(guilds=True, users=True)
-@app_commands.allowed_contexts(guilds=True, dms=False, private_channels=True)
 @client.tree.command(name="uiduser", description="Get the UID of a specific Discord user")
 async def uiduser(interaction: discord.Interaction, user: discord.User):
     if not interaction.guild:
@@ -721,7 +755,7 @@ async def uiduser(interaction: discord.Interaction, user: discord.User):
     await interaction.response.defer(ephemeral=ephemeral)
     
     discord_user = str(user)
-    player = linked_usernames.get(discord_user, temp_usernames.get(discord_user, discord_user))
+    player = linked_usernames.get(discord_user)
 
     if player in linked_uids:
         uid = linked_uids[player]
@@ -747,7 +781,7 @@ async def kduser(interaction: discord.Interaction, user: discord.User, server_id
     await interaction.response.defer(ephemeral=ephemeral)
 
     discord_user = str(user)
-    player = linked_usernames.get(discord_user, temp_usernames.get(discord_user, discord_user))
+    player = linked_usernames.get(discord_user)
 
     load_data()
     available_server_ids = server_ids.get(guild_id, []) + ["All"]

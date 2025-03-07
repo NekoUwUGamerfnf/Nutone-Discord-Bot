@@ -14,11 +14,11 @@ load_dotenv()
 TOKEN = os.getenv("DISCORD_TOKEN")
 
 
-LINKED_USERNAMES_PATH = "/nutone/linked_usernames.json"
-SERVER_IDS_PATH = "/nutone/server_ids.json"
-LINKED_UIDS_PATH = "/nutone/linked_uids.json"
-VALID_USERNAMES_PATH = "/nutone/valid_usernames.json"
-HIDDEN_PATH = "/nutone/hidden.json"
+LINKED_USERNAMES_PATH = "nutone/linked_usernames.json"
+SERVER_IDS_PATH = "nutone/server_ids.json"
+LINKED_UIDS_PATH = "nutone/linked_uids.json"
+VALID_USERNAMES_PATH = "nutone/valid_usernames.json"
+HIDDEN_PATH = "nutone/hidden.json"
 
 
 linked_usernames = {}
@@ -69,9 +69,9 @@ async def on_ready():
 
 status_index = 0
 statuses = [
-    lambda total_members, total_guilds: discord.Game(name=f"I'm looking at the stats of {total_members} discord users and in {total_guilds} discord servers"),
-    lambda total_members, total_guilds: discord.Game(name="Sending Stats of players to https://nutone.okudai.dev"),
-    lambda total_members, total_guilds: discord.Game(name="Looking at Stats of players on https://nutone.okudai.dev")
+    lambda total_members, total_guilds: discord.Game(name=f"I'm In {total_guilds} Discord Servers"),
+    lambda total_members, total_guilds: discord.Game(name="Okudai Is Very Cool"),
+    lambda total_members, total_guilds: discord.Game(name="Check Player Stats On https://nutone.okudai.dev")
 ]
 
 @tasks.loop(minutes=1)

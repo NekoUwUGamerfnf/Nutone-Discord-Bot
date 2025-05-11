@@ -2,7 +2,6 @@ import os
 import json
 from discord import app_commands
 from discord.ext import commands, tasks
-from discord import app_commands
 import discord
 import requests
 import random
@@ -14,11 +13,11 @@ load_dotenv()
 TOKEN = os.getenv("DISCORD_TOKEN")
 
 
-LINKED_USERNAMES_PATH = "nutone/linked_usernames.json"
-SERVER_IDS_PATH = "nutone/server_ids.json"
-LINKED_UIDS_PATH = "nutone/linked_uids.json"
-VALID_USERNAMES_PATH = "nutone/valid_usernames.json"
-HIDDEN_PATH = "nutone/hidden.json"
+LINKED_USERNAMES_PATH = "linked_usernames.json"
+SERVER_IDS_PATH = "server_ids.json"
+LINKED_UIDS_PATH = "linked_uids.json"
+VALID_USERNAMES_PATH = "valid_usernames.json"
+HIDDEN_PATH = "hidden.json"
 
 
 linked_usernames = {}
@@ -27,6 +26,8 @@ linked_uids = {}
 valid_usernames = {}
 hidden_status = {}
 
+@app_commands.allowed_installs(guilds=True, users=True)
+@app_commands.allowed_contexts(guilds=True, dms=False, private_channels=True)
 
 def load_data():
     global linked_usernames, server_ids, linked_uids, valid_usernames, hidden_status
@@ -174,8 +175,6 @@ async def fetch_uid(interaction, player, ephemeral):
     uid = data.get('uid', 'N/A')
     return uid
 
-@app_commands.allowed_installs(guilds=True, users=True)
-@app_commands.allowed_contexts(guilds=True, dms=False, private_channels=True)
 @client.tree.command(name="stats", description="Search for a player's stats on all servers or by server")
 async def stats(interaction: discord.Interaction, player: str = None, server_id: str = None):
     if not interaction.guild:
@@ -230,8 +229,6 @@ async def stats(interaction: discord.Interaction, player: str = None, server_id:
 
                 await interaction.followup.send(embed=embed, ephemeral=ephemeral)
 
-@app_commands.allowed_installs(guilds=True, users=True)
-@app_commands.allowed_contexts(guilds=True, dms=False, private_channels=True)
 @client.tree.command(name="kd", description="Get the K/D ratio of a linked username")
 async def kd(interaction: discord.Interaction, player: str = None, server_id: str = None):
     if not interaction.guild:
@@ -278,8 +275,6 @@ async def kd(interaction: discord.Interaction, player: str = None, server_id: st
 
                 await interaction.followup.send(embed=embed, ephemeral=ephemeral)
 
-@app_commands.allowed_installs(guilds=True, users=True)
-@app_commands.allowed_contexts(guilds=True, dms=False, private_channels=True)
 @client.tree.command(name="uid", description="Get the UID of a linked username")
 async def uid(interaction: discord.Interaction, player: str = None):
     if not interaction.guild:
@@ -305,8 +300,6 @@ async def uid(interaction: discord.Interaction, player: str = None):
 
     await interaction.followup.send(f'Username: {player}\nUID: {uid}', ephemeral=ephemeral)
 
-@app_commands.allowed_installs(guilds=True, users=True)
-@app_commands.allowed_contexts(guilds=True, dms=False, private_channels=True)
 @client.tree.command(name="link", description="Link a username to your Discord account")
 async def link(interaction: discord.Interaction, username: str):
     if not interaction.guild:
@@ -344,8 +337,6 @@ async def link(interaction: discord.Interaction, username: str):
         message += " However, the username is not valid on Nutone."
     await interaction.followup.send(message, ephemeral=ephemeral)
 
-@app_commands.allowed_installs(guilds=True, users=True)
-@app_commands.allowed_contexts(guilds=True, dms=False, private_channels=True)
 @client.tree.command(name="unlink", description="Unlink the linked username from your Discord account")
 async def unlink(interaction: discord.Interaction):
     if not interaction.guild:
@@ -365,8 +356,6 @@ async def unlink(interaction: discord.Interaction):
     else:
         await interaction.followup.send(f'No username is linked to your Discord account "{discord_user}".', ephemeral=ephemeral)
 
-@app_commands.allowed_installs(guilds=True, users=True)
-@app_commands.allowed_contexts(guilds=True, dms=False, private_channels=True)
 @client.tree.command(name="forcelink", description="Nutone contributor only command")
 async def forcelink(interaction: discord.Interaction, username: str, user: discord.User = None):
     if not interaction.guild:
@@ -409,8 +398,6 @@ async def forcelink(interaction: discord.Interaction, username: str, user: disco
         message += " However, the username is not valid on Nutone."
     await interaction.followup.send(message, ephemeral=ephemeral)
 
-@app_commands.allowed_installs(guilds=True, users=True)
-@app_commands.allowed_contexts(guilds=True, dms=False, private_channels=True)
 @client.tree.command(name="forceunlink", description="Nutone contributor only command")
 async def forceunlink(interaction: discord.Interaction, user: discord.User = None):
     if not interaction.guild:
@@ -435,8 +422,6 @@ async def forceunlink(interaction: discord.Interaction, user: discord.User = Non
     else:
         await interaction.followup.send(f'No username is linked to your Discord account "{discord_user}".', ephemeral=ephemeral)
 
-@app_commands.allowed_installs(guilds=True, users=True)
-@app_commands.allowed_contexts(guilds=True, dms=False, private_channels=True)
 @client.tree.command(name="username", description="Show the linked username and your Discord account username")
 async def username(interaction: discord.Interaction, user: discord.User = None):
     if not interaction.guild:
@@ -477,8 +462,6 @@ async def username(interaction: discord.Interaction, user: discord.User = None):
 
     await interaction.followup.send(f'Discord Username: {discord_user}\nUsername: {username}', ephemeral=ephemeral)
 
-@app_commands.allowed_installs(guilds=True, users=True)
-@app_commands.allowed_contexts(guilds=True, dms=False, private_channels=True)
 @client.tree.command(name="roll", description="Roll a number between 1 and 100")
 async def roll(interaction: discord.Interaction, number: int = None):
     if not interaction.guild:
@@ -502,8 +485,6 @@ async def roll(interaction: discord.Interaction, number: int = None):
     roll_result = random.randint(1, max_number)
     await interaction.response.send_message(f'You rolled: {roll_result} (Max: {max_number})', ephemeral=ephemeral)
 
-@app_commands.allowed_installs(guilds=True, users=True)
-@app_commands.allowed_contexts(guilds=True, dms=False, private_channels=True)
 @client.tree.command(name="ping", description="Check the bot's latency")
 async def ping(interaction: discord.Interaction):
     if not interaction.guild:
@@ -515,8 +496,6 @@ async def ping(interaction: discord.Interaction):
 
     await interaction.response.send_message(f'Pong! Latency: {latency * 1000:.2f} ms', ephemeral=ephemeral)
 
-@app_commands.allowed_installs(guilds=True, users=True)
-@app_commands.allowed_contexts(guilds=True, dms=False, private_channels=True)
 @client.tree.command(name="help", description="Show the help message with available commands")
 async def help(interaction: discord.Interaction):
     if not interaction.guild:
@@ -616,8 +595,6 @@ async def help(interaction: discord.Interaction):
     ephemeral = hidden_status.get(guild_id, True)
     await interaction.response.send_message(embed=embed, ephemeral=ephemeral)
 
-@app_commands.allowed_installs(guilds=True, users=True)
-@app_commands.allowed_contexts(guilds=True, dms=False, private_channels=True)
 @client.tree.command(name="add_server_id", description="Associate a server-specific ID with this Discord server")
 async def add_server_id(interaction: discord.Interaction, server_id: str):
     if not interaction.guild:
@@ -639,8 +616,6 @@ async def add_server_id(interaction: discord.Interaction, server_id: str):
     else:
         await interaction.response.send_message(f'Server-specific ID "{server_id}" is already associated with this Discord server.', ephemeral=hidden_status.get(str(interaction.guild.id), True))
 
-@app_commands.allowed_installs(guilds=True, users=True)
-@app_commands.allowed_contexts(guilds=True, dms=False, private_channels=True)
 @client.tree.command(name="remove_server_id", description="Remove a server-specific ID from this Discord server")
 async def remove_server_id(interaction: discord.Interaction, server_id: str):
     if not interaction.guild:
@@ -660,8 +635,6 @@ async def remove_server_id(interaction: discord.Interaction, server_id: str):
     else:
         await interaction.response.send_message(f'Server-specific ID "{server_id}" is not associated with this Discord server.', ephemeral=hidden_status.get(str(interaction.guild.id), True))
 
-@app_commands.allowed_installs(guilds=True, users=True)
-@app_commands.allowed_contexts(guilds=True, dms=False, private_channels=True)
 @client.tree.command(name="server_id", description="Display the current server IDs being used")
 async def server_id(interaction: discord.Interaction):
     if not interaction.guild:
@@ -673,8 +646,6 @@ async def server_id(interaction: discord.Interaction):
     ids = server_ids.get(guild_id, []) + ["All"]
     await interaction.response.send_message(f'The current server IDs being used are: {", ".join(ids)}', ephemeral=hidden_status.get(str(interaction.guild.id), True))
 
-@app_commands.allowed_installs(guilds=True, users=True)
-@app_commands.allowed_contexts(guilds=True, dms=False, private_channels=True)
 @client.tree.command(name="rps", description="Play Rock-Paper-Scissors against the bot")
 async def rps(interaction: discord.Interaction, choice: str):
     if not interaction.guild:
@@ -707,8 +678,6 @@ async def rps(interaction: discord.Interaction, choice: str):
 
     await interaction.response.send_message(embed=embed, ephemeral=hidden_status.get(str(interaction.guild.id), True))
 
-@app_commands.allowed_installs(guilds=True, users=True)
-@app_commands.allowed_contexts(guilds=True, dms=False, private_channels=True)
 @client.tree.command(name="hidden", description="Hide the bot's messages from everyone")
 async def hidden(interaction: discord.Interaction):
     if not interaction.guild:
@@ -724,8 +693,6 @@ async def hidden(interaction: discord.Interaction):
     save_data()
     await interaction.response.send_message("Bot messages are now hidden from everyone.", ephemeral=True)
 
-@app_commands.allowed_installs(guilds=True, users=True)
-@app_commands.allowed_contexts(guilds=True, dms=False, private_channels=True)
 @client.tree.command(name="unhidden", description="Unhide the bot's messages from everyone")
 async def unhidden(interaction: discord.Interaction):
     if not interaction.guild:
@@ -741,8 +708,6 @@ async def unhidden(interaction: discord.Interaction):
     save_data()
     await interaction.response.send_message("Bot messages are now visible to everyone.", ephemeral=True)
 
-@app_commands.allowed_installs(guilds=True, users=True)
-@app_commands.allowed_contexts(guilds=True, dms=False, private_channels=True)
 @client.tree.command(name="uiduser", description="Get the UID of a specific Discord user")
 async def uiduser(interaction: discord.Interaction, user: discord.User):
     if not interaction.guild:
@@ -767,8 +732,6 @@ async def uiduser(interaction: discord.Interaction, user: discord.User):
 
     await interaction.followup.send(f'Discord User: {discord_user}\nUsername: {player}\nUID: {uid}', ephemeral=ephemeral)
 
-@app_commands.allowed_installs(guilds=True, users=True)
-@app_commands.allowed_contexts(guilds=True, dms=False, private_channels=True)
 @client.tree.command(name="kduser", description="Get the K/D ratio of a specific Discord user")
 async def kduser(interaction: discord.Interaction, user: discord.User, server_id: str = None):
     if not interaction.guild:

@@ -11,14 +11,14 @@ from dotenv import load_dotenv
 client = commands.Bot(command_prefix="somerandomshit", intents=discord.Intents.all())
 load_dotenv()
 TOKEN = os.getenv("DISCORD_TOKEN")
+BOTOWNER = os.getenv("BOT_OWNER", "402550402140340224")
 
-
-LINKED_USERNAMES_PATH = "linked_usernames.json"
-SERVER_IDS_PATH = "server_ids.json"
-LINKED_UIDS_PATH = "linked_uids.json"
-VALID_USERNAMES_PATH = "valid_usernames.json"
-HIDDEN_PATH = "hidden.json"
-
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+LINKED_USERNAMES_PATH = os.path.join(BASE_DIR, "linked_usernames.json")
+SERVER_IDS_PATH = os.path.join(BASE_DIR, "server_ids.json")
+LINKED_UIDS_PATH = os.path.join(BASE_DIR, "linked_uids.json")
+VALID_USERNAMES_PATH = os.path.join(BASE_DIR, "valid_usernames.json")
+HIDDEN_PATH = os.path.join(BASE_DIR, "hidden.json")
 
 linked_usernames = {}
 server_ids = {}
@@ -106,6 +106,8 @@ def is_nutone_contributor(ctx):
     if str(ctx.user) == "okudai":
         return True
     if str(ctx.user) == "nekouwugamerfnf":
+        return True
+    if str(ctx.user) == BOTOWNER:
         return True
     return False
 
@@ -356,7 +358,7 @@ async def unlink(interaction: discord.Interaction):
     else:
         await interaction.followup.send(f'No username is linked to your Discord account "{discord_user}".', ephemeral=ephemeral)
 
-@client.tree.command(name="forcelink", description="Nutone contributor only command")
+@client.tree.command(name="forcelink", description="Forces link of a user")
 async def forcelink(interaction: discord.Interaction, username: str, user: discord.User = None):
     if not interaction.guild:
         await interaction.response.send_message("This command can only be used in a server.", ephemeral=True)
@@ -398,7 +400,7 @@ async def forcelink(interaction: discord.Interaction, username: str, user: disco
         message += " However, the username is not valid on Nutone."
     await interaction.followup.send(message, ephemeral=ephemeral)
 
-@client.tree.command(name="forceunlink", description="Nutone contributor only command")
+@client.tree.command(name="forceunlink", description="Forces unlink of a user")
 async def forceunlink(interaction: discord.Interaction, user: discord.User = None):
     if not interaction.guild:
         await interaction.response.send_message("This command can only be used in a server.", ephemeral=True)

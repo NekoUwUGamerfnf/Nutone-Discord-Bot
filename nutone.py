@@ -554,12 +554,12 @@ async def help(interaction: discord.Interaction):
     )
     embed.add_field(
         name="/forcelink [username]",
-        value="Nutone contributor only command.",
+        value="Forces link of a user.",
         inline=False
     )
     embed.add_field(
         name="/forceunlink",
-        value="Nutone contributor only command.",
+        value="Forces unlink of a user.",
         inline=False
     )
     embed.add_field(

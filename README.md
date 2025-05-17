@@ -1,6 +1,7 @@
-`docker pull ghcr.io/nekouwugamerfnf/nutone-api-discord-bot:latest`
+`ghcr.io/nekouwugamerfnf/nutone-api-discord-bot:latest`
 
-`x-logging:
+```yml
+x-logging:
   &logging
   logging:
     driver: "json-file"
@@ -14,4 +15,4 @@ services:
     image: ghcr.io/nekouwugamerfnf/nutone-api-discord-bot:latest
     pull_policy: always
     restart: always
-`
+```

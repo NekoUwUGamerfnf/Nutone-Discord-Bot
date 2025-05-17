@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - main
+    paths:
+      - nutone.py
 
 jobs:
   Build-And-Push:

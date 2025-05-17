@@ -1,0 +1,1 @@
+`docker pull ghcr.io/nekouwugamerfnf/nutone-api-discord-bot:latest`

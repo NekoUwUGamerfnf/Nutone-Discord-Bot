@@ -104,13 +104,13 @@ async def on_command_error(ctx, error):
     await ctx.send(f'An error occurred: {error}', ephemeral=True)
 
 def is_nutone_contributor(ctx):
-    if str(ctx.user) == "fvnkhead":
+    if str(ctx.user.id) == 477779764627767297:
         return True
-    if str(ctx.user) == "okudai":
+    if str(ctx.user.id) == 581483164103606292:
         return True
-    if str(ctx.user) == "nekouwugamerfnf":
+    if str(ctx.user.id) == 402550402140340224:
         return True
-    if str(ctx.user) == BOTOWNER:
+    if str(ctx.user.id) == BOTOWNER:
         return True
     return False
 

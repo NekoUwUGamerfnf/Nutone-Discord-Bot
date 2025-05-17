@@ -189,7 +189,7 @@ async def stats(interaction: discord.Interaction, player: str = None, server_id:
     await interaction.response.defer(ephemeral=ephemeral)
 
     if player is None:
-        discord_user = str(interaction.user)
+        discord_user = str(interaction.user.id)
         player = linked_usernames.get(discord_user)
 
     load_data()
@@ -243,7 +243,7 @@ async def kd(interaction: discord.Interaction, player: str = None, server_id: st
     await interaction.response.defer(ephemeral=ephemeral)
 
     if player is None:
-        discord_user = str(interaction.user)
+        discord_user = str(interaction.user.id)
         player = linked_usernames.get(discord_user)
 
     load_data()
@@ -289,7 +289,7 @@ async def uid(interaction: discord.Interaction, player: str = None):
     await interaction.response.defer(ephemeral=ephemeral)
 
     if player is None:
-        discord_user = str(interaction.user)
+        discord_user = str(interaction.user.id)
         player = linked_usernames.get(discord_user)
 
     if player in linked_uids:
@@ -308,7 +308,7 @@ async def link(interaction: discord.Interaction, username: str):
         await interaction.response.send_message("This command can only be used in a server.", ephemeral=True)
         return
     await interaction.response.defer(ephemeral=True)
-    discord_user = str(interaction.user)
+    discord_user = str(interaction.user.id)
     ephemeral = hidden_status.get(str(interaction.guild.id), True)
 
     if username in valid_usernames:
@@ -345,7 +345,7 @@ async def unlink(interaction: discord.Interaction):
         await interaction.response.send_message("This command can only be used in a server.", ephemeral=True)
         return
     await interaction.response.defer(ephemeral=True)
-    discord_user = str(interaction.user)
+    discord_user = str(interaction.user.id)
     ephemeral = hidden_status.get(str(interaction.guild.id), True)
 
     if discord_user in linked_usernames:
@@ -369,7 +369,7 @@ async def forcelink(interaction: discord.Interaction, username: str, user: disco
         return
 
     await interaction.response.defer(ephemeral=True)
-    discord_user = str(user)
+    discord_user = str(user.id)
     ephemeral = hidden_status.get(str(interaction.guild.id), True)
 
     if username in valid_usernames:
@@ -411,7 +411,7 @@ async def forceunlink(interaction: discord.Interaction, user: discord.User = Non
         return
 
     await interaction.response.defer(ephemeral=True)
-    discord_user = str(user)
+    discord_user = str(user.id)
     ephemeral = hidden_status.get(str(interaction.guild.id), True)
 
     if discord_user in linked_usernames:
@@ -435,9 +435,9 @@ async def username(interaction: discord.Interaction, user: discord.User = None):
     await interaction.response.defer(ephemeral=ephemeral)
     
     if user is None:
-        discord_user = str(interaction.user)
+        discord_user = str(interaction.user.id)
     else:
-        discord_user = str(user)
+        discord_user = str(user.id)
 
     username = linked_usernames.get(discord_user)
     if not username:
@@ -721,7 +721,7 @@ async def uiduser(interaction: discord.Interaction, user: discord.User):
 
     await interaction.response.defer(ephemeral=ephemeral)
     
-    discord_user = str(user)
+    discord_user = str(user.id)
     player = linked_usernames.get(discord_user)
 
     if player in linked_uids:
@@ -745,7 +745,7 @@ async def kduser(interaction: discord.Interaction, user: discord.User, server_id
 
     await interaction.response.defer(ephemeral=ephemeral)
 
-    discord_user = str(user)
+    discord_user = str(user.id)
     player = linked_usernames.get(discord_user)
 
     load_data()

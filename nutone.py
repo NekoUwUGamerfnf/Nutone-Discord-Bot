@@ -8,7 +8,7 @@ import random
 import asyncio
 from dotenv import load_dotenv
 
-client = commands.Bot(command_prefix="somerandomshit", intents=discord.Intents.all())
+client = commands.Bot(command_prefix="", intents=discord.Intents.all())
 load_dotenv()
 TOKEN = os.getenv("DISCORD_TOKEN")
 BOTOWNER = os.getenv("BOT_OWNER", "402550402140340224")
@@ -60,6 +60,9 @@ def save_data():
     with open(HIDDEN_PATH, 'w') as f:
         json.dump(hidden_status, f)
 
+@client.event
+async def on_message(message):
+    return
 
 @client.event
 async def on_ready():

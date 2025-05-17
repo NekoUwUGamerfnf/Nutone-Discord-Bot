@@ -33,5 +33,5 @@ jobs:
           context: .
           push: true
           tags: |
-            ghcr.io/${{toLower(github.repository_owner)}}/nutone-api-discord-bot:latest
-            ghcr.io/${{toLower(github.repository_owner)}}/nutone-api-discord-bot:${{ github.sha }}
+            ghcr.io/toLower(${{github.repository_owner}})/nutone-api-discord-bot:latest
+            ghcr.io/toLower(${{github.repository_owner}})/nutone-api-discord-bot:${{ github.sha }}

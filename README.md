@@ -14,5 +14,8 @@ services:
     << : *logging
     image: ghcr.io/nekouwugamerfnf/nutone-api-discord-bot:latest
     pull_policy: always
+    environment:
+    - DISCORD_TOKEN=
+    - BOT_OWNER=
     restart: always
 ```

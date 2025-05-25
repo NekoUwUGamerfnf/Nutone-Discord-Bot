@@ -482,9 +482,6 @@ async def roll(interaction: discord.Interaction, number: int = None):
         if number < 1:
             await interaction.response.send_message("Number must be at least 1.", ephemeral=True)
             return
-        elif number > 100:
-            await interaction.response.send_message("Number must be at most 100.", ephemeral=True)
-            return
         max_number = number
 
     roll_result = random.randint(1, max_number)

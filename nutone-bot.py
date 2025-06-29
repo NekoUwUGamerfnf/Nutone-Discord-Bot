@@ -52,7 +52,7 @@ def load_data():
         with open(HIDDEN_PATH, 'r') as f:
             data = json.load(f)
             if isinstance(data, dict):
-                hidden_status = [guild_id for guild_id, is_hidden in data.items() if is_hidden]
+                hidden_status = [guild_id for guild_id, is_hidden in data.items() if not is_hidden]
             else:
                 hidden_status = data
 

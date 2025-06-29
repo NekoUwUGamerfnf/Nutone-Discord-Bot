@@ -8,7 +8,15 @@ import random
 import asyncio
 from dotenv import load_dotenv
 
-client = commands.Bot(command_prefix="", intents=discord.Intents.all())
+NUTONE_WEBSITE = "https://nutone.okudai.dev/v1"
+
+intents = discord.Intents.default()
+intents.message_content = True
+intents.guilds = True
+intents.guild_messages = True
+intents.members = True
+
+client = commands.Bot(command_prefix="", intents=intents)
 load_dotenv()
 TOKEN = os.getenv("DISCORD_TOKEN")
 BOTOWNER = os.getenv("BOT_OWNER", "402550402140340224")
@@ -24,10 +32,7 @@ linked_usernames = {}
 server_ids = {}
 linked_uids = {}
 valid_usernames = {}
-hidden_status = {}
-
-@app_commands.allowed_installs(guilds=True, users=True)
-@app_commands.allowed_contexts(guilds=True, dms=False, private_channels=True)
+hidden_status = []
 
 def load_data():
     global linked_usernames, server_ids, linked_uids, valid_usernames, hidden_status
@@ -45,7 +50,11 @@ def load_data():
             valid_usernames.update(json.load(f))
     if os.path.exists(HIDDEN_PATH):
         with open(HIDDEN_PATH, 'r') as f:
-            hidden_status.update(json.load(f))
+            data = json.load(f)
+            if isinstance(data, dict):
+                hidden_status = [guild_id for guild_id, is_hidden in data.items() if is_hidden]
+            else:
+                hidden_status = data
 
 
 def save_data():
@@ -66,8 +75,24 @@ async def on_message(message):
 
 @client.event
 async def on_ready():
-    print(f'Bot is ready. Logged in as {client.user}')
+    print(f'Bot Is Ready Logged In As {client.user}')
     load_data()
+    
+    current_guild_ids = {str(guild.id) for guild in client.guilds}
+    guilds_to_remove = [guild_id for guild_id in server_ids.keys() if guild_id not in current_guild_ids]
+    hidden_to_remove = [guild_id for guild_id in hidden_status if guild_id not in current_guild_ids]
+    
+    for guild_id in guilds_to_remove:
+        del server_ids[guild_id]
+    
+    for guild_id in hidden_to_remove:
+        hidden_status.remove(guild_id)
+    
+    if guilds_to_remove or hidden_to_remove:
+        save_data()
+        total_removed = len(set(guilds_to_remove + hidden_to_remove))
+        print(f'Cleaned Up Server Data For {total_removed} Guilds The Bot Is No Longer In')
+    
     await client.tree.sync()
     update_status.start()
 
@@ -75,7 +100,7 @@ status_index = 0
 statuses = [
     lambda total_members, total_guilds: discord.Game(name=f"I'm In {total_guilds} Discord Servers"),
     lambda total_members, total_guilds: discord.Game(name="Okudai Is Very Cool"),
-    lambda total_members, total_guilds: discord.Game(name="Check Player Stats On https://nutone.okudai.dev")
+    lambda total_members, total_guilds: discord.Game(name=f"Check Player Stats On {NUTONE_WEBSITE}")
 ]
 
 @tasks.loop(minutes=1)
@@ -96,12 +121,20 @@ async def update_status():
 @client.event
 async def on_guild_join(guild):
     guild_id = str(guild.id)
-    hidden_status[guild_id] = True
+    save_data()
+
+@client.event
+async def on_guild_remove(guild):
+    guild_id = str(guild.id)
+    if guild_id in hidden_status:
+        hidden_status.remove(guild_id)
+    if guild_id in server_ids:
+        del server_ids[guild_id]
     save_data()
 
 @client.event
 async def on_command_error(ctx, error):
-    await ctx.send(f'An error occurred: {error}', ephemeral=True)
+    await ctx.send(f'An Error Has Occurred: {error}', ephemeral=True)
 
 def is_nutone_contributor(ctx):
     if str(ctx.user.id) == 477779764627767297:
@@ -117,36 +150,38 @@ def is_nutone_contributor(ctx):
 def is_admin(ctx):
     if ctx.guild.owner_id == ctx.user.id:
         return True
+    if ctx.user.guild_permissions.administrator:
+        return True
     if is_nutone_contributor:
         return True
     return False
 
 async def fetch_stats(interaction, player, server_id, ephemeral):
     if server_id == "All":
-        url = f'https://nutone.okudai.dev/players/{player}'
+        url = f'{NUTONE_WEBSITE}/players/{player}'
     else:
-        url = f'https://nutone.okudai.dev/players/{player}?server_id={server_id}'
+        url = f'{NUTONE_WEBSITE}/players/{player}?server_id={server_id}'
 
     try:
         r = await asyncio.wait_for(asyncio.to_thread(requests.get, url), timeout=10.0)
         r.raise_for_status()
     except asyncio.TimeoutError:
-        await interaction.followup.send(f"Request timed out while fetching stats for server ID: {server_id}.", ephemeral=ephemeral)
+        await interaction.followup.send(f"Request Timed Out While Fetching Stats For Server ID: {server_id}", ephemeral=ephemeral)
         return None
     except requests.exceptions.HTTPError as e:
         if r.status_code == 404:
-            await interaction.followup.send(f"No stats found for player: {player} on server: {server_id}", ephemeral=ephemeral)
+            await interaction.followup.send(f"No Stats Found For Player: {player} On Server: {server_id}", ephemeral=ephemeral)
         else:
-            await interaction.followup.send(f"An error occurred: {e}", ephemeral=ephemeral)
+            await interaction.followup.send(f"An Error Has Occurred: {e}", ephemeral=ephemeral)
         return None
     except requests.exceptions.RequestException as e:
-        await interaction.followup.send(f"An error occurred: {e}", ephemeral=ephemeral)
+        await interaction.followup.send(f"An Error Has Occurred: {e}", ephemeral=ephemeral)
         return None
 
     try:
         data = r.json()
     except ValueError:
-        await interaction.followup.send("Error: Received invalid JSON response", ephemeral=ephemeral)
+        await interaction.followup.send("Error: Received Invalid JSON Response", ephemeral=ephemeral)
         return None
 
     uid = data.get('uid')
@@ -158,36 +193,61 @@ async def fetch_stats(interaction, player, server_id, ephemeral):
     return data
 
 async def fetch_uid(interaction, player, ephemeral):
-    url = f'https://nutone.okudai.dev/players/{player}'
+    url = f'{NUTONE_WEBSITE}/players/{player}'
     try:
         r = await asyncio.wait_for(asyncio.to_thread(requests.get, url), timeout=10.0)
         r.raise_for_status()
     except asyncio.TimeoutError:
-        await interaction.followup.send("Request timed out while fetching UID.", ephemeral=ephemeral)
+        await interaction.followup.send("Request Timed Out While Fetching Uid", ephemeral=ephemeral)
         return 'N/A'
     except requests.exceptions.HTTPError:
         return 'N/A'
     except requests.exceptions.RequestException as e:
-        await interaction.followup.send(f"An error occurred: {e}", ephemeral=ephemeral)
+        await interaction.followup.send(f"An Error Has Occurred: {e}", ephemeral=ephemeral)
         return 'N/A'
 
     try:
         data = r.json()
     except ValueError:
-        await interaction.followup.send("Error: Received invalid JSON response", ephemeral=ephemeral)
+        await interaction.followup.send("Error: Received Invalid JSON Response", ephemeral=ephemeral)
         return 'N/A'
 
     uid = data.get('uid', 'N/A')
     return uid
 
-@client.tree.command(name="stats", description="Search for a player's stats on all servers or by server")
-async def stats(interaction: discord.Interaction, player: str = None, server_id: str = None):
-    if not interaction.guild:
-        await interaction.response.send_message("This command can only be used in a server.", ephemeral=True)
-        return
+async def fetch_aliases(interaction, player, ephemeral):
+    url = f'{NUTONE_WEBSITE}/players/{player}'
+    try:
+        r = await asyncio.wait_for(asyncio.to_thread(requests.get, url), timeout=10.0)
+        r.raise_for_status()
+    except asyncio.TimeoutError:
+        await interaction.followup.send("Request Timed Out While Fetching Aliases", ephemeral=ephemeral)
+        return None, None
+    except requests.exceptions.HTTPError as e:
+        if r.status_code == 404:
+            await interaction.followup.send(f"No Data Found For Player: {player}", ephemeral=ephemeral)
+        else:
+            await interaction.followup.send(f"An Error Has Occurred: {e}", ephemeral=ephemeral)
+        return None, None
+    except requests.exceptions.RequestException as e:
+        await interaction.followup.send(f"An Error Has Occurred: {e}", ephemeral=ephemeral)
+        return None, None
 
-    guild_id = str(interaction.guild.id)
-    ephemeral = hidden_status.get(guild_id, True)
+    try:
+        data = r.json()
+    except ValueError:
+        await interaction.followup.send("Error: Received Invalid JSON Response", ephemeral=ephemeral)
+        return None, None
+
+    current_name = data.get('name', player)
+    aliases = data.get('aliases', [])
+    
+    return current_name, aliases
+
+@client.tree.command(name="stats", description="Search For A Player's Stats On All Servers Or By Server")
+@app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
+async def stats(interaction: discord.Interaction, player: str = None, server_id: str = None):
+    ephemeral = str(interaction.guild.id) not in hidden_status if interaction.guild else True
 
     await interaction.response.defer(ephemeral=ephemeral)
 
@@ -196,7 +256,7 @@ async def stats(interaction: discord.Interaction, player: str = None, server_id:
         player = linked_usernames.get(discord_user)
 
     load_data()
-    available_server_ids = server_ids.get(guild_id, []) + ["All"]
+    available_server_ids = server_ids.get(str(interaction.guild.id), []) + ["All"] if interaction.guild else ["All"]
 
     if server_id:
         data = await fetch_stats(interaction, player, server_id, ephemeral)
@@ -234,14 +294,10 @@ async def stats(interaction: discord.Interaction, player: str = None, server_id:
 
                 await interaction.followup.send(embed=embed, ephemeral=ephemeral)
 
-@client.tree.command(name="kd", description="Get the K/D ratio of a linked username")
+@client.tree.command(name="kd", description="Get The K/D Ratio Of A Linked Username")
+@app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
 async def kd(interaction: discord.Interaction, player: str = None, server_id: str = None):
-    if not interaction.guild:
-        await interaction.response.send_message("This command can only be used in a server.", ephemeral=True)
-        return
-
-    guild_id = str(interaction.guild.id)
-    ephemeral = hidden_status.get(guild_id, True)
+    ephemeral = str(interaction.guild.id) not in hidden_status if interaction.guild else True
 
     await interaction.response.defer(ephemeral=ephemeral)
 
@@ -250,7 +306,7 @@ async def kd(interaction: discord.Interaction, player: str = None, server_id: st
         player = linked_usernames.get(discord_user)
 
     load_data()
-    available_server_ids = server_ids.get(guild_id, []) + ["All"]
+    available_server_ids = server_ids.get(str(interaction.guild.id), []) + ["All"] if interaction.guild else ["All"]
 
     if server_id:
         data = await fetch_stats(interaction, player, server_id, ephemeral)
@@ -280,14 +336,10 @@ async def kd(interaction: discord.Interaction, player: str = None, server_id: st
 
                 await interaction.followup.send(embed=embed, ephemeral=ephemeral)
 
-@client.tree.command(name="uid", description="Get the UID of a linked username")
+@client.tree.command(name="uid", description="Get The Uid Of A Linked Username")
+@app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
 async def uid(interaction: discord.Interaction, player: str = None):
-    if not interaction.guild:
-        await interaction.response.send_message("This command can only be used in a server.", ephemeral=True)
-        return
-
-    guild_id = str(interaction.guild.id)
-    ephemeral = hidden_status.get(guild_id, True)
+    ephemeral = str(interaction.guild.id) not in hidden_status if interaction.guild else True
 
     await interaction.response.defer(ephemeral=ephemeral)
 
@@ -303,140 +355,158 @@ async def uid(interaction: discord.Interaction, player: str = None):
             linked_uids[player] = uid
             save_data()
 
-    await interaction.followup.send(f'Username: {player}\nUID: {uid}', ephemeral=ephemeral)
+    await interaction.followup.send(f'Username: {player}\nUid: {uid}', ephemeral=ephemeral)
 
-@client.tree.command(name="link", description="Link a username to your Discord account")
-async def link(interaction: discord.Interaction, username: str):
-    if not interaction.guild:
-        await interaction.response.send_message("This command can only be used in a server.", ephemeral=True)
-        return
-    await interaction.response.defer(ephemeral=True)
-    discord_user = str(interaction.user.id)
-    ephemeral = hidden_status.get(str(interaction.guild.id), True)
+@client.tree.command(name="alias", description="Get The Aliases Of A Linked Username")
+@app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
+async def alias(interaction: discord.Interaction, player: str = None):
+    ephemeral = str(interaction.guild.id) not in hidden_status if interaction.guild else True
 
-    if username in valid_usernames:
-        valid = True
-        uid = linked_uids.get(username, 'N/A')
-    else:
-        url = f'https://nutone.okudai.dev/players/{username}'
-        try:
-            r = requests.get(url)
-            r.raise_for_status()
-            valid = True
-        except requests.exceptions.HTTPError:
-            valid = False
-        except requests.exceptions.RequestException:
-            await interaction.followup.send("An error occurred while checking the username validity.", ephemeral=ephemeral)
-            return
-
-        if valid:
-            uid = await fetch_uid(interaction, username, ephemeral)
-            if uid != 'N/A':
-                linked_uids[username] = uid
-            valid_usernames[username] = valid
-
-    linked_usernames[discord_user] = username
-    save_data()
-    message = f'Username "{username}" linked to Discord account "{discord_user}".'
-    if not valid:
-        message += " However, the username is not valid on Nutone."
-    await interaction.followup.send(message, ephemeral=ephemeral)
-
-@client.tree.command(name="unlink", description="Unlink the linked username from your Discord account")
-async def unlink(interaction: discord.Interaction):
-    if not interaction.guild:
-        await interaction.response.send_message("This command can only be used in a server.", ephemeral=True)
-        return
-    await interaction.response.defer(ephemeral=True)
-    discord_user = str(interaction.user.id)
-    ephemeral = hidden_status.get(str(interaction.guild.id), True)
-
-    if discord_user in linked_usernames:
-        username = linked_usernames[discord_user]
-        del linked_usernames[discord_user]
-        if username in linked_uids:
-            del linked_uids[username]
-        save_data()
-        await interaction.followup.send(f'Unlinked the username "{username}" from Discord account "{discord_user}".', ephemeral=ephemeral)
-    else:
-        await interaction.followup.send(f'No username is linked to your Discord account "{discord_user}".', ephemeral=ephemeral)
-
-@client.tree.command(name="forcelink", description="Forces link of a user")
-async def forcelink(interaction: discord.Interaction, username: str, user: discord.User = None):
-    if not interaction.guild:
-        await interaction.response.send_message("This command can only be used in a server.", ephemeral=True)
-        return
-
-    if not is_nutone_contributor(interaction):
-        await interaction.response.send_message("You do not have permission to use this command.", ephemeral=hidden_status.get(str(interaction.guild.id), True))
-        return
-
-    await interaction.response.defer(ephemeral=True)
-    discord_user = str(user.id)
-    ephemeral = hidden_status.get(str(interaction.guild.id), True)
-
-    if username in valid_usernames:
-        valid = True
-        uid = linked_uids.get(username, 'N/A')
-    else:
-        url = f'https://nutone.okudai.dev/players/{username}'
-        try:
-            r = requests.get(url)
-            r.raise_for_status()
-            valid = True
-        except requests.exceptions.HTTPError:
-            valid = False
-        except requests.exceptions.RequestException:
-            await interaction.followup.send("An error occurred while checking the username validity.", ephemeral=ephemeral)
-            return
-
-        if valid:
-            uid = await fetch_uid(interaction, username, ephemeral)
-            if uid != 'N/A':
-                linked_uids[username] = uid
-            valid_usernames[username] = valid
-
-    linked_usernames[discord_user] = username
-    save_data()
-    message = f'Username "{username}" linked to Discord account "{discord_user}".'
-    if not valid:
-        message += " However, the username is not valid on Nutone."
-    await interaction.followup.send(message, ephemeral=ephemeral)
-
-@client.tree.command(name="forceunlink", description="Forces unlink of a user")
-async def forceunlink(interaction: discord.Interaction, user: discord.User = None):
-    if not interaction.guild:
-        await interaction.response.send_message("This command can only be used in a server.", ephemeral=True)
-        return
-
-    if not is_nutone_contributor(interaction):
-        await interaction.response.send_message("You do not have permission to use this command.", ephemeral=hidden_status.get(str(interaction.guild.id), True))
-        return
-
-    await interaction.response.defer(ephemeral=True)
-    discord_user = str(user.id)
-    ephemeral = hidden_status.get(str(interaction.guild.id), True)
-
-    if discord_user in linked_usernames:
-        username = linked_usernames[discord_user]
-        del linked_usernames[discord_user]
-        if username in linked_uids:
-            del linked_uids[username]
-        save_data()
-        await interaction.followup.send(f'Unlinked the username "{username}" from Discord account "{discord_user}".', ephemeral=ephemeral)
-    else:
-        await interaction.followup.send(f'No username is linked to your Discord account "{discord_user}".', ephemeral=ephemeral)
-
-@client.tree.command(name="username", description="Show the linked username and your Discord account username")
-async def username(interaction: discord.Interaction, user: discord.User = None):
-    if not interaction.guild:
-        await interaction.response.send_message("This command can only be used in a server.", ephemeral=True)
-        return
-      
-    guild_id = str(interaction.guild.id)
-    ephemeral = hidden_status.get(guild_id, True)
     await interaction.response.defer(ephemeral=ephemeral)
+
+    if player is None:
+        discord_user = str(interaction.user.id)
+        player = linked_usernames.get(discord_user)
+
+    current_name, aliases = await fetch_aliases(interaction, player, ephemeral)
     
+    if current_name is None:
+        return
+
+    embed = discord.Embed(
+        title=f"Aliases for {current_name}",
+        color=discord.Color.blue()
+    )
+    embed.add_field(name="Current Name", value=current_name, inline=False)
+    
+    if aliases and len(aliases) > 0:
+        aliases_text = "\n".join(aliases)
+        embed.add_field(name="Aliases", value=aliases_text, inline=False)
+    else:
+        embed.add_field(name="Aliases", value="No Aliases Found", inline=False)
+
+    await interaction.followup.send(embed=embed, ephemeral=ephemeral)
+
+@client.tree.command(name="link", description="Link A Username To Your Discord Account")
+@app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
+async def link(interaction: discord.Interaction, username: str):
+    await interaction.response.defer(ephemeral=True)
+    discord_user = str(interaction.user.id)
+    ephemeral = str(interaction.guild.id) not in hidden_status if interaction.guild else True
+
+    if username in valid_usernames:
+        valid = True
+        uid = linked_uids.get(username, 'N/A')
+    else:
+        url = f'{NUTONE_WEBSITE}/players/{username}'
+        try:
+            r = requests.get(url)
+            r.raise_for_status()
+            valid = True
+        except requests.exceptions.HTTPError:
+            valid = False
+        except requests.exceptions.RequestException:
+            await interaction.followup.send("An Error Has Occurred While Checking The Username Validity", ephemeral=ephemeral)
+            return
+
+        if valid:
+            uid = await fetch_uid(interaction, username, ephemeral)
+            if uid != 'N/A':
+                linked_uids[username] = uid
+            valid_usernames[username] = valid
+
+    linked_usernames[discord_user] = username
+    save_data()
+    message = f'Username "{username}" Linked To Discord Account "{discord_user}"'
+    if not valid:
+        message += " However The Username Is Not Valid On Nutone"
+    await interaction.followup.send(message, ephemeral=ephemeral)
+
+@client.tree.command(name="unlink", description="Unlink The Linked Username From Your Discord Account")
+@app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
+async def unlink(interaction: discord.Interaction):
+    await interaction.response.defer(ephemeral=True)
+    discord_user = str(interaction.user.id)
+    ephemeral = str(interaction.guild.id) not in hidden_status if interaction.guild else True
+
+    if discord_user in linked_usernames:
+        username = linked_usernames[discord_user]
+        del linked_usernames[discord_user]
+        if username in linked_uids:
+            del linked_uids[username]
+        save_data()
+        await interaction.followup.send(f'Unlinked The Username "{username}" From Discord Account "{discord_user}"', ephemeral=ephemeral)
+    else:
+        await interaction.followup.send(f'No Username Is Linked To Your Discord Account "{discord_user}"', ephemeral=ephemeral)
+
+@client.tree.command(name="forcelink", description="Forces Link Of A User")
+@app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
+async def forcelink(interaction: discord.Interaction, username: str, user: discord.User = None):
+    if not is_nutone_contributor(interaction):
+        ephemeral_value = str(interaction.guild.id) not in hidden_status if interaction.guild else True
+        await interaction.response.send_message("You Do Not Have Permission To Use This Command", ephemeral=ephemeral_value)
+        return
+
+    await interaction.response.defer(ephemeral=True)
+    discord_user = str(user.id)
+    ephemeral = str(interaction.guild.id) not in hidden_status if interaction.guild else True
+
+    if username in valid_usernames:
+        valid = True
+        uid = linked_uids.get(username, 'N/A')
+    else:
+        url = f'{NUTONE_WEBSITE}/players/{username}'
+        try:
+            r = requests.get(url)
+            r.raise_for_status()
+            valid = True
+        except requests.exceptions.HTTPError:
+            valid = False
+        except requests.exceptions.RequestException:
+            await interaction.followup.send("An Error Has Occurred While Checking The Username Validity", ephemeral=ephemeral)
+            return
+
+        if valid:
+            uid = await fetch_uid(interaction, username, ephemeral)
+            if uid != 'N/A':
+                linked_uids[username] = uid
+            valid_usernames[username] = valid
+
+    linked_usernames[discord_user] = username
+    save_data()
+    message = f'Username "{username}" Linked To Discord Account "{discord_user}"'
+    if not valid:
+        message += " However The Username Is Not Valid On Nutone"
+    await interaction.followup.send(message, ephemeral=ephemeral)
+
+@client.tree.command(name="forceunlink", description="Forces Unlink Of A User")
+@app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
+async def forceunlink(interaction: discord.Interaction, user: discord.User = None):
+    if not is_nutone_contributor(interaction):
+        ephemeral_value = str(interaction.guild.id) not in hidden_status if interaction.guild else True
+        await interaction.response.send_message("You Do Not Have Permission To Use This Command", ephemeral=ephemeral_value)
+        return
+
+    await interaction.response.defer(ephemeral=True)
+    discord_user = str(user.id)
+    ephemeral = str(interaction.guild.id) not in hidden_status if interaction.guild else True
+
+    if discord_user in linked_usernames:
+        username = linked_usernames[discord_user]
+        del linked_usernames[discord_user]
+        if username in linked_uids:
+            del linked_uids[username]
+        save_data()
+        await interaction.followup.send(f'Unlinked The Username "{username}" From Discord Account "{discord_user}"', ephemeral=ephemeral)
+    else:
+        await interaction.followup.send(f'No Username Is Linked To Your Discord Account "{discord_user}"', ephemeral=ephemeral)
+
+@client.tree.command(name="username", description="Show The Linked Username And Your Discord Account Username")
+@app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
+async def username(interaction: discord.Interaction, user: discord.User = None):
+    ephemeral = str(interaction.guild.id) not in hidden_status if interaction.guild else True
+    await interaction.response.defer(ephemeral=ephemeral)
+
     if user is None:
         discord_user = str(interaction.user.id)
     else:
@@ -447,7 +517,7 @@ async def username(interaction: discord.Interaction, user: discord.User = None):
         if discord_user in valid_usernames:
             username = discord_user
         else:
-            url = f'https://nutone.okudai.dev/players/{discord_user}'
+            url = f'{NUTONE_WEBSITE}/players/{discord_user}'
             try:
                 r = requests.get(url)
                 r.raise_for_status()
@@ -455,7 +525,7 @@ async def username(interaction: discord.Interaction, user: discord.User = None):
             except requests.exceptions.HTTPError:
                 valid = False
             except requests.exceptions.RequestException:
-                await interaction.response.send_message("An error occurred while checking the username validity.", ephemeral=True)
+                await interaction.response.send_message("An Error Has Occurred While Checking The Username Validity", ephemeral=False)
                 return
 
             if valid:
@@ -467,144 +537,143 @@ async def username(interaction: discord.Interaction, user: discord.User = None):
 
     await interaction.followup.send(f'Discord Username: {discord_user}\nUsername: {username}', ephemeral=ephemeral)
 
-@client.tree.command(name="roll", description="Roll a number between 1 and 100")
+@client.tree.command(name="roll", description="Roll A Number Between 1 And 100")
+@app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
 async def roll(interaction: discord.Interaction, number: int = None):
-    if not interaction.guild:
-        await interaction.response.send_message("This command can only be used in a server.", ephemeral=True)
-        return
-
-    guild_id = str(interaction.guild.id)
-    ephemeral = hidden_status.get(guild_id, True)
+    ephemeral = str(interaction.guild.id) not in hidden_status if interaction.guild else True
 
     if number is None:
         max_number = 100
     else:
         if number < 1:
-            await interaction.response.send_message("Number must be at least 1.", ephemeral=True)
+            await interaction.response.send_message("Number Must Be At Least 1", ephemeral=False)
             return
         max_number = number
 
     roll_result = random.randint(1, max_number)
-    await interaction.response.send_message(f'You rolled: {roll_result} (Max: {max_number})', ephemeral=ephemeral)
+    await interaction.response.send_message(f'You Rolled: {roll_result} (Max: {max_number})', ephemeral=ephemeral)
 
-@client.tree.command(name="ping", description="Check the bot's latency")
+@client.tree.command(name="ping", description="Check The Bot's Latency")
+@app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
 async def ping(interaction: discord.Interaction):
-    if not interaction.guild:
-        await interaction.response.send_message("This command can only be used in a server.", ephemeral=True)
-        return
     latency = client.latency
-    guild_id = str(interaction.guild.id)
-    ephemeral = hidden_status.get(guild_id, True)
+    ephemeral = str(interaction.guild.id) not in hidden_status if interaction.guild else True
 
     await interaction.response.send_message(f'Pong! Latency: {latency * 1000:.2f} ms', ephemeral=ephemeral)
 
-@client.tree.command(name="help", description="Show the help message with available commands")
+@client.tree.command(name="help", description="Show The Help Message With Available Commands")
+@app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
 async def help(interaction: discord.Interaction):
-    if not interaction.guild:
-        await interaction.response.send_message("This command can only be used in a server.", ephemeral=True)
-        return
+    ephemeral = str(interaction.guild.id) not in hidden_status if interaction.guild else True
     embed = discord.Embed(
         title="Help - Available Commands",
         color=discord.Color.green()
     )
     embed.add_field(
         name="/stats [player] [server_id]",
-        value="Search for a player's stats on all servers or by server. If no player is specified, it will use your linked username or Discord username. Optionally specify a server ID.",
+        value="Search For A Player's Stats On All Servers Or By Server If No Player Is Specified It Will Use Your Linked Username Or Discord Username Optionally Specify A Server ID",
         inline=False
     )
     embed.add_field(
         name="/kd [player] [server_id]",
-        value="Get the K/D ratio of a linked username. If no player is specified, it will use your linked username or Discord username. Optionally specify a server ID.",
+        value="Get The K/D Ratio Of A Linked Username If No Player Is Specified It Will Use Your Linked Username Or Discord Username Optionally Specify A Server ID",
         inline=False
     )
     embed.add_field(
         name="/uid [player]",
-        value="Get the UID of a linked username on 'All' the servers. If no player is specified, it will use your linked username or Discord username.",
+        value="Get The Uid Of A Linked Username On 'All' The Servers If No Player Is Specified It Will Use Your Linked Username Or Discord Username",
+        inline=False
+    )
+    embed.add_field(
+        name="/alias [player]",
+        value="Get The Aliases Of A Linked Username If No Player Is Specified It Will Use Your Linked Username Or Discord Username",
         inline=False
     )
     embed.add_field(
         name="/roll [number]",
-        value="Roll a number between 1 and 100.",
+        value="Roll A Number Between 1 And 100",
         inline=False
     )
     embed.add_field(
         name="/ping",
-        value="Check the bot's latency.",
+        value="Check The Bot's Latency",
         inline=False
     )
     embed.add_field(
         name="/rps [choice]",
-        value="Play Rock-Paper-Scissors against the bot. Choose rock, paper, or scissors.",
+        value="Play Rock-Paper-Scissors Against The Bot Choose Rock Paper Or Scissors",
         inline=False
     )
     embed.add_field(
         name="/help",
-        value="Show this help message with available commands.",
+        value="Show This Help Message With Available Commands",
         inline=False
     )
     embed.add_field(
         name="/link [username]",
-        value="Link a username to your Discord account.",
+        value="Link A Username To Your Discord Account",
         inline=False
     )
     embed.add_field(
         name="/unlink",
-        value="Unlink the linked username from your Discord account.",
+        value="Unlink The Linked Username From Your Discord Account",
         inline=False
     )
     embed.add_field(
         name="/forcelink [username]",
-        value="Forces link of a user.",
+        value="Forces Link Of A User",
         inline=False
     )
     embed.add_field(
         name="/forceunlink",
-        value="Forces unlink of a user.",
+        value="Forces Unlink Of A User",
         inline=False
     )
     embed.add_field(
         name="/username [user]",
-        value="Show the linked username and your Discord account username. Optionally specify a user to see their linked username.",
+        value="Show The Linked Username And Your Discord Account Username Optionally Specify A User To See Their Linked Username",
         inline=False
     )
     embed.add_field(
         name="/add_server_id [server_id]",
-        value="Associate a server-specific ID with this Discord server. Only the server owner can use this command.",
+        value="Associate A Server-Specific ID With This Discord Server Only The Server Owner Can Use This Command",
         inline=False
     )
     embed.add_field(
         name="/remove_server_id [server_id]",
-        value="Remove a server-specific ID from this Discord server. Only the server owner can use this command.",
+        value="Remove A Server-Specific ID From This Discord Server Only The Server Owner Can Use This Command",
         inline=False
     )
     embed.add_field(
         name="/server_id",
-        value="Display the current server IDs being used. Always includes 'All'.",
+        value="Display The Current Server IDs Being Used Always Includes 'All'",
         inline=False
     )
     embed.add_field(
         name="/hidden",
-        value="Hide the bot's messages from everyone. Only the server owner can use this command.",
+        value="Hide The Bot's Messages From Everyone Only The Server Owner Can Use This Command",
         inline=False
     )
     embed.add_field(
         name="/unhidden",
-        value="Unhide the bot's messages from everyone. Only the server owner can use this command.",
+        value="Unhide The Bot's Messages From Everyone Only The Server Owner Can Use This Command",
         inline=False
     )
 
-    guild_id = str(interaction.guild.id)
-    ephemeral = hidden_status.get(guild_id, True)
     await interaction.response.send_message(embed=embed, ephemeral=ephemeral)
 
-@client.tree.command(name="add_server_id", description="Associate a server-specific ID with this Discord server")
+@client.tree.command(name="add_server_id", description="Associate A Server-Specific ID With This Discord Server")
 async def add_server_id(interaction: discord.Interaction, server_id: str):
     if not interaction.guild:
-        await interaction.response.send_message("This command can only be used in a server.", ephemeral=hidden_status.get(str(interaction.guild.id), True))
+        await interaction.response.send_message("This Command Can Only Be Used In A Server", ephemeral=True)
+        return
+
+    if interaction.guild not in client.guilds:
+        await interaction.response.send_message("Bot Is Not In This Server", ephemeral=True)
         return
 
     if not is_admin(interaction):
-        await interaction.response.send_message("You do not have permission to use this command.", ephemeral=hidden_status.get(str(interaction.guild.id), True))
+        await interaction.response.send_message("You Do Not Have Permission To Use This Command", ephemeral=str(interaction.guild.id) not in hidden_status)
         return
 
     guild_id = str(interaction.guild.id)
@@ -614,18 +683,22 @@ async def add_server_id(interaction: discord.Interaction, server_id: str):
     if server_id not in server_ids[guild_id]:
         server_ids[guild_id].append(server_id)
         save_data()
-        await interaction.response.send_message(f'Server-specific ID "{server_id}" associated with this Discord server.', ephemeral=hidden_status.get(str(interaction.guild.id), True))
+        await interaction.response.send_message(f'Server-Specific ID "{server_id}" Associated With This Discord Server', ephemeral=str(interaction.guild.id) not in hidden_status)
     else:
-        await interaction.response.send_message(f'Server-specific ID "{server_id}" is already associated with this Discord server.', ephemeral=hidden_status.get(str(interaction.guild.id), True))
+        await interaction.response.send_message(f'Server-Specific ID "{server_id}" Is Already Associated With This Discord Server', ephemeral=str(interaction.guild.id) not in hidden_status)
 
-@client.tree.command(name="remove_server_id", description="Remove a server-specific ID from this Discord server")
+@client.tree.command(name="remove_server_id", description="Remove A Server-Specific ID From This Discord Server")
 async def remove_server_id(interaction: discord.Interaction, server_id: str):
     if not interaction.guild:
-        await interaction.response.send_message("This command can only be used in a server.", ephemeral=hidden_status.get(str(interaction.guild.id), True))
+        await interaction.response.send_message("This Command Can Only Be Used In A Server", ephemeral=True)
+        return
+
+    if interaction.guild not in client.guilds:
+        await interaction.response.send_message("Bot Is Not In This Server", ephemeral=True)
         return
     
     if not is_admin(interaction):
-        await interaction.response.send_message("You do not have permission to use this command.", ephemeral=hidden_status.get(str(interaction.guild.id), True))
+        await interaction.response.send_message("You Do Not Have Permission To Use This Command", ephemeral=str(interaction.guild.id) not in hidden_status)
         return
 
     guild_id = str(interaction.guild.id)
@@ -633,42 +706,41 @@ async def remove_server_id(interaction: discord.Interaction, server_id: str):
     if guild_id in server_ids and server_id in server_ids[guild_id]:
         server_ids[guild_id].remove(server_id)
         save_data()
-        await interaction.response.send_message(f'Server-specific ID "{server_id}" removed from this Discord server.', ephemeral=hidden_status.get(str(interaction.guild.id), True))
+        await interaction.response.send_message(f'Server-Specific ID "{server_id}" Removed From This Discord Server', ephemeral=str(interaction.guild.id) not in hidden_status)
     else:
-        await interaction.response.send_message(f'Server-specific ID "{server_id}" is not associated with this Discord server.', ephemeral=hidden_status.get(str(interaction.guild.id), True))
+        await interaction.response.send_message(f'Server-Specific ID "{server_id}" Is Not Associated With This Discord Server', ephemeral=str(interaction.guild.id) not in hidden_status)
 
-@client.tree.command(name="server_id", description="Display the current server IDs being used")
+@client.tree.command(name="server_id", description="Display The Current Server IDs Being Used")
 async def server_id(interaction: discord.Interaction):
     if not interaction.guild:
-        await interaction.response.send_message("This command can only be used in a server.", ephemeral=hidden_status.get(str(interaction.guild.id), True))
+        await interaction.response.send_message("This Command Can Only Be Used In A Server", ephemeral=True)
         return
 
     guild_id = str(interaction.guild.id)
     load_data()
     ids = server_ids.get(guild_id, []) + ["All"]
-    await interaction.response.send_message(f'The current server IDs being used are: {", ".join(ids)}', ephemeral=hidden_status.get(str(interaction.guild.id), True))
+    await interaction.response.send_message(f'The Current Server IDs Being Used Are: {", ".join(ids)}', ephemeral=guild_id not in hidden_status)
 
-@client.tree.command(name="rps", description="Play Rock-Paper-Scissors against the bot")
+@client.tree.command(name="rps", description="Play Rock-Paper-Scissors Against The Bot")
+@app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
 async def rps(interaction: discord.Interaction, choice: str):
-    if not interaction.guild:
-        await interaction.response.send_message("This command can only be used in a server.", ephemeral=hidden_status.get(str(interaction.guild.id), True))
-        return
+    ephemeral = str(interaction.guild.id) not in hidden_status if interaction.guild else True
 
     choices = ["rock", "paper", "scissors"]
     if choice.lower() not in choices:
-        await interaction.response.send_message("Invalid choice. Please choose rock, paper, or scissors.", ephemeral=hidden_status.get(str(interaction.guild.id), True))
+        await interaction.response.send_message("Invalid Choice Please Choose Rock Paper Or Scissors", ephemeral=ephemeral)
         return
 
     bot_choice = random.choice(choices)
     result = ""
     if choice == bot_choice:
-        result = "It's a tie!"
+        result = "It's A Tie!"
     elif (choice == "rock" and bot_choice == "scissors") or \
             (choice == "scissors" and bot_choice == "paper") or \
             (choice == "paper" and bot_choice == "rock"):
-        result = "You win!"
+        result = "You Win!"
     else:
-        result = "You lose!"
+        result = "You Lose!"
 
     embed = discord.Embed(
         title="Rock-Paper-Scissors",
@@ -678,49 +750,59 @@ async def rps(interaction: discord.Interaction, choice: str):
     embed.add_field(name="Bot's Choice", value=bot_choice, inline=True)
     embed.add_field(name="Result", value=result, inline=True)
 
-    await interaction.response.send_message(embed=embed, ephemeral=hidden_status.get(str(interaction.guild.id), True))
+    await interaction.response.send_message(embed=embed, ephemeral=ephemeral)
 
-@client.tree.command(name="hidden", description="Hide the bot's messages from everyone")
+@client.tree.command(name="hidden", description="Hide The Bot's Messages From Everyone")
 async def hidden(interaction: discord.Interaction):
     if not interaction.guild:
-        await interaction.response.send_message("This command can only be used in a server.", ephemeral=True)
+        await interaction.response.send_message("This Command Can Only Be Used In A Server", ephemeral=True)
+        return
+
+    if interaction.guild not in client.guilds:
+        await interaction.response.send_message("Bot Is Not In This Server", ephemeral=True)
         return
 
     if not is_admin(interaction):
-        await interaction.response.send_message("You do not have permission to use this command.", ephemeral=True)
+        await interaction.response.send_message("You Do Not Have Permission To Use This Command", ephemeral=True)
         return
 
     guild_id = str(interaction.guild.id)
-    hidden_status[guild_id] = True
-    save_data()
-    await interaction.response.send_message("Bot messages are now hidden from everyone.", ephemeral=True)
+    if guild_id in hidden_status:
+        hidden_status.remove(guild_id)
+        save_data()
+        await interaction.response.send_message("Bot Messages Are Now Hidden From Everyone", ephemeral=True)
+    else:
+        await interaction.response.send_message("Bot Messages Are Already Hidden From Everyone", ephemeral=True)
 
-@client.tree.command(name="unhidden", description="Unhide the bot's messages from everyone")
+@client.tree.command(name="unhidden", description="Unhide The Bot's Messages From Everyone")
 async def unhidden(interaction: discord.Interaction):
     if not interaction.guild:
-        await interaction.response.send_message("This command can only be used in a server.", ephemeral=True)
+        await interaction.response.send_message("This Command Can Only Be Used In A Server", ephemeral=True)
+        return
+
+    if interaction.guild not in client.guilds:
+        await interaction.response.send_message("Bot Is Not In This Server", ephemeral=True)
         return
 
     if not is_admin(interaction):
-        await interaction.response.send_message("You do not have permission to use this command.", ephemeral=True)
+        await interaction.response.send_message("You Do Not Have Permission To Use This Command", ephemeral=True)
         return
 
     guild_id = str(interaction.guild.id)
-    hidden_status[guild_id] = False
-    save_data()
-    await interaction.response.send_message("Bot messages are now visible to everyone.", ephemeral=True)
+    if guild_id not in hidden_status:
+        hidden_status.append(guild_id)
+        save_data()
+        await interaction.response.send_message("Bot Messages Are Now Visible To Everyone", ephemeral=True)
+    else:
+        await interaction.response.send_message("Bot Messages Are Already Visible To Everyone", ephemeral=True)
 
-@client.tree.command(name="uiduser", description="Get the UID of a specific Discord user")
+@client.tree.command(name="uiduser", description="Get The Uid Of A Specific Discord User")
+@app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
 async def uiduser(interaction: discord.Interaction, user: discord.User):
-    if not interaction.guild:
-        await interaction.response.send_message("This command can only be used in a server.", ephemeral=True)
-        return
-
-    guild_id = str(interaction.guild.id)
-    ephemeral = hidden_status.get(guild_id, True)
+    ephemeral = str(interaction.guild.id) not in hidden_status if interaction.guild else True
 
     await interaction.response.defer(ephemeral=ephemeral)
-    
+
     discord_user = str(user.id)
     player = linked_usernames.get(discord_user)
 
@@ -732,16 +814,12 @@ async def uiduser(interaction: discord.Interaction, user: discord.User):
             linked_uids[player] = uid
             save_data()
 
-    await interaction.followup.send(f'Discord User: {discord_user}\nUsername: {player}\nUID: {uid}', ephemeral=ephemeral)
+    await interaction.followup.send(f'Discord User: {discord_user}\nUsername: {player}\nUid: {uid}', ephemeral=ephemeral)
 
-@client.tree.command(name="kduser", description="Get the K/D ratio of a specific Discord user")
+@client.tree.command(name="kduser", description="Get The K/D Ratio Of A Specific Discord User")
+@app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
 async def kduser(interaction: discord.Interaction, user: discord.User, server_id: str = None):
-    if not interaction.guild:
-        await interaction.response.send_message("This command can only be used in a server.", ephemeral=True)
-        return
-
-    guild_id = str(interaction.guild.id)
-    ephemeral = hidden_status.get(guild_id, True)
+    ephemeral = str(interaction.guild.id) not in hidden_status if interaction.guild else True
 
     await interaction.response.defer(ephemeral=ephemeral)
 
@@ -749,7 +827,7 @@ async def kduser(interaction: discord.Interaction, user: discord.User, server_id
     player = linked_usernames.get(discord_user)
 
     load_data()
-    available_server_ids = server_ids.get(guild_id, []) + ["All"]
+    available_server_ids = server_ids.get(str(interaction.guild.id), []) + ["All"] if interaction.guild else ["All"]
 
     if server_id:
         data = await fetch_stats(interaction, player, server_id, ephemeral)

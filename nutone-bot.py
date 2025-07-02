@@ -198,7 +198,7 @@ async def fetch_uid(interaction, player, ephemeral):
         r = await asyncio.wait_for(asyncio.to_thread(requests.get, url), timeout=10.0)
         r.raise_for_status()
     except asyncio.TimeoutError:
-        await interaction.followup.send("Request Timed Out While Fetching Uid", ephemeral=ephemeral)
+        await interaction.followup.send("Request Timed Out While Fetching UID", ephemeral=ephemeral)
         return 'N/A'
     except requests.exceptions.HTTPError:
         return 'N/A'
@@ -267,7 +267,7 @@ async def stats(interaction: discord.Interaction, player: str = None, server_id:
             kd_ratio = total_stats.get('kd', 'N/A')
 
             embed = discord.Embed(
-                title=f"Stats for {player} on server {server_id}",
+                title=f"Stats For {player} On Server {server_id}",
                 color=discord.Color.blue()
             )
             embed.add_field(name="Kills", value=kills, inline=True)
@@ -285,7 +285,7 @@ async def stats(interaction: discord.Interaction, player: str = None, server_id:
                 kd_ratio = total_stats.get('kd', 'N/A')
 
                 embed = discord.Embed(
-                    title=f"Stats for {player} on server {sid}",
+                    title=f"Stats For {player} On Server {sid}",
                     color=discord.Color.blue()
                 )
                 embed.add_field(name="Kills", value=kills, inline=True)
@@ -315,7 +315,7 @@ async def kd(interaction: discord.Interaction, player: str = None, server_id: st
             kd_ratio = total_stats.get('kd', 'N/A')
 
             embed = discord.Embed(
-                title=f"K/D Ratio for {player} on server {server_id}",
+                title=f"K/D Ratio For {player} On Server {server_id}",
                 color=discord.Color.blue()
             )
             embed.add_field(name="K/D Ratio", value=kd_ratio, inline=True)
@@ -329,14 +329,14 @@ async def kd(interaction: discord.Interaction, player: str = None, server_id: st
                 kd_ratio = total_stats.get('kd', 'N/A')
 
                 embed = discord.Embed(
-                    title=f"K/D Ratio for {player} on server {sid}",
+                    title=f"K/D Ratio For {player} On Server {sid}",
                     color=discord.Color.blue()
                 )
                 embed.add_field(name="K/D Ratio", value=kd_ratio, inline=True)
 
                 await interaction.followup.send(embed=embed, ephemeral=ephemeral)
 
-@client.tree.command(name="uid", description="Get The Uid Of A Linked Username")
+@client.tree.command(name="uid", description="Get The UID Of A Linked Username")
 @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
 async def uid(interaction: discord.Interaction, player: str = None):
     ephemeral = str(interaction.guild.id) not in hidden_status if interaction.guild else True
@@ -355,7 +355,7 @@ async def uid(interaction: discord.Interaction, player: str = None):
             linked_uids[player] = uid
             save_data()
 
-    await interaction.followup.send(f'Username: {player}\nUid: {uid}', ephemeral=ephemeral)
+    await interaction.followup.send(f'Username: {player}\nUID: {uid}', ephemeral=ephemeral)
 
 @client.tree.command(name="alias", description="Get The Aliases Of A Linked Username")
 @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
@@ -374,7 +374,7 @@ async def alias(interaction: discord.Interaction, player: str = None):
         return
 
     embed = discord.Embed(
-        title=f"Aliases for {current_name}",
+        title=f"Aliases For {current_name}",
         color=discord.Color.blue()
     )
     embed.add_field(name="Current Name", value=current_name, inline=False)
@@ -559,7 +559,7 @@ async def ping(interaction: discord.Interaction):
     latency = client.latency
     ephemeral = str(interaction.guild.id) not in hidden_status if interaction.guild else True
 
-    await interaction.response.send_message(f'Pong! Latency: {latency * 1000:.2f} ms', ephemeral=ephemeral)
+    await interaction.response.send_message(f'Pong! Latency: {latency * 1000:.2f} Ms', ephemeral=ephemeral)
 
 @client.tree.command(name="help", description="Show The Help Message With Available Commands")
 @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
@@ -581,7 +581,7 @@ async def help(interaction: discord.Interaction):
     )
     embed.add_field(
         name="/uid [player]",
-        value="Get The Uid Of A Linked Username On 'All' The Servers If No Player Is Specified It Will Use Your Linked Username Or Discord Username",
+        value="Get The UID Of A Linked Username On 'All' The Servers If No Player Is Specified It Will Use Your Linked Username Or Discord Username",
         inline=False
     )
     embed.add_field(
@@ -680,6 +680,11 @@ async def add_server_id(interaction: discord.Interaction, server_id: str):
     load_data()
     if guild_id not in server_ids:
         server_ids[guild_id] = []
+    
+    if len(server_ids[guild_id]) >= 10:
+        await interaction.response.send_message("Maximum Limit Of 10 Server IDs Reached For This Discord Server", ephemeral=str(interaction.guild.id) not in hidden_status)
+        return
+    
     if server_id not in server_ids[guild_id]:
         server_ids[guild_id].append(server_id)
         save_data()
@@ -796,7 +801,7 @@ async def unhidden(interaction: discord.Interaction):
     else:
         await interaction.response.send_message("Bot Messages Are Already Visible To Everyone", ephemeral=True)
 
-@client.tree.command(name="uiduser", description="Get The Uid Of A Specific Discord User")
+@client.tree.command(name="uiduser", description="Get The UID Of A Specific Discord User")
 @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
 async def uiduser(interaction: discord.Interaction, user: discord.User):
     ephemeral = str(interaction.guild.id) not in hidden_status if interaction.guild else True
@@ -814,7 +819,7 @@ async def uiduser(interaction: discord.Interaction, user: discord.User):
             linked_uids[player] = uid
             save_data()
 
-    await interaction.followup.send(f'Discord User: {discord_user}\nUsername: {player}\nUid: {uid}', ephemeral=ephemeral)
+    await interaction.followup.send(f'Discord User: {discord_user}\nUsername: {player}\nUID: {uid}', ephemeral=ephemeral)
 
 @client.tree.command(name="kduser", description="Get The K/D Ratio Of A Specific Discord User")
 @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
@@ -836,7 +841,7 @@ async def kduser(interaction: discord.Interaction, user: discord.User, server_id
             kd_ratio = total_stats.get('kd', 'N/A')
 
             embed = discord.Embed(
-                title=f"K/D Ratio for {player} on server {server_id}",
+                title=f"K/D Ratio For {player} On Server {server_id}",
                 color=discord.Color.blue()
             )
             embed.add_field(name="K/D Ratio", value=kd_ratio, inline=True)
@@ -850,7 +855,7 @@ async def kduser(interaction: discord.Interaction, user: discord.User, server_id
                 kd_ratio = total_stats.get('kd', 'N/A')
 
                 embed = discord.Embed(
-                    title=f"K/D Ratio for {player} on server {sid}",
+                    title=f"K/D Ratio For {player} On Server {sid}",
                     color=discord.Color.blue()
                 )
                 embed.add_field(name="K/D Ratio", value=kd_ratio, inline=True)

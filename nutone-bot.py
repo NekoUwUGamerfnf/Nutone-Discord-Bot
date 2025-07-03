@@ -731,18 +731,26 @@ async def server_id(interaction: discord.Interaction):
 async def rps(interaction: discord.Interaction, choice: str):
     ephemeral = str(interaction.guild.id) not in hidden_status if interaction.guild else True
 
-    choices = ["rock", "paper", "scissors"]
-    if choice.lower() not in choices:
-        await interaction.response.send_message("Invalid Choice Please Choose Rock Paper Or Scissors", ephemeral=ephemeral)
-        return
+    choices = ["Rock", "Paper", "Scissors"]
+    newchoice = choice
+    choicel = newchoice.lower()
+    if choicel == "rock":
+        newchoice = "Rock"
+    elif choicel == "paper":
+        newchoice = "Paper"
+    elif choicel == "scissors":
+        newchoice = "Scissors"
+    if newchoice not in choices:
+        newchoice = random.choice(choices)
 
     bot_choice = random.choice(choices)
+    bot_choicel = bot_choice.lower()
     result = ""
-    if choice == bot_choice:
+    if choicel == bot_choicel:
         result = "It's A Tie!"
-    elif (choice == "rock" and bot_choice == "scissors") or \
-            (choice == "scissors" and bot_choice == "paper") or \
-            (choice == "paper" and bot_choice == "rock"):
+    elif (choicel == "rock" and bot_choicel == "scissors") or \
+            (choicel == "scissors" and bot_choicel == "paper") or \
+            (choicel == "paper" and bot_choicel == "rock"):
         result = "You Win!"
     else:
         result = "You Lose!"
@@ -751,10 +759,28 @@ async def rps(interaction: discord.Interaction, choice: str):
         title="Rock-Paper-Scissors",
         color=discord.Color.blue()
     )
-    embed.add_field(name="Your Choice", value=choice, inline=True)
+    if choice.lower() != newchoice.lower():
+        embed.add_field(name="Your Choice", value=f"{newchoice} (Random)", inline=True)
+    else:
+        embed.add_field(name="Your Choice", value=newchoice, inline=True)
     embed.add_field(name="Bot's Choice", value=bot_choice, inline=True)
     embed.add_field(name="Result", value=result, inline=True)
 
+    await interaction.response.send_message(embed=embed, ephemeral=ephemeral)
+
+@client.tree.command(name="coinflip", description="Flip A Coin")
+@app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
+async def coinflip(interaction: discord.Interaction):
+    ephemeral = str(interaction.guild.id) not in hidden_status if interaction.guild else True
+    
+    result = random.choice(["Heads", "Tails"])
+    
+    embed = discord.Embed(
+        title="Coin Flip",
+        color=discord.Color.gold()
+    )
+    embed.add_field(name="Result", value=result, inline=False)
+    
     await interaction.response.send_message(embed=embed, ephemeral=ephemeral)
 
 @client.tree.command(name="hidden", description="Hide The Bot's Messages From Everyone")

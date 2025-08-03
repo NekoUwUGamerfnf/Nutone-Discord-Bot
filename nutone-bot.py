@@ -98,9 +98,9 @@ async def on_ready():
 
 status_index = 0
 statuses = [
-    lambda total_members, total_guilds: discord.Game(name=f"I'm In {total_guilds} Discord Servers"),
-    lambda total_members, total_guilds: discord.Game(name="Okudai Is Very Cool"),
-    lambda total_members, total_guilds: discord.Game(name=f"Check Player Stats On {NUTONE_WEBSITE}")
+    lambda total_guilds: discord.Game(name=f"I'm In {total_guilds} Discord Servers"),
+    lambda: discord.Game(name="Okudai Is Very Cool"),
+    lambda: discord.Game(name=f"Check Player Stats On {NUTONE_WEBSITE}")
 ]
 
 @tasks.loop(minutes=1)
@@ -137,13 +137,15 @@ async def on_command_error(ctx, error):
     await ctx.send(f'An Error Has Occurred: {error}', ephemeral=True)
 
 def is_nutone_contributor(ctx):
+    if str(ctx.user.id) == BOTOWNER:
+        return True
+    if str(client.user.id) != 1250221553166319719:
+        return False
     if str(ctx.user.id) == 477779764627767297:
         return True
     if str(ctx.user.id) == 581483164103606292:
         return True
     if str(ctx.user.id) == 402550402140340224:
-        return True
-    if str(ctx.user.id) == BOTOWNER:
         return True
     return False
 

@@ -8,7 +8,7 @@ import random
 import asyncio
 from dotenv import load_dotenv
 
-NUTONE_WEBSITE = "https://nutone.okudai.dev/v1"
+NUTONE_WEBSITE = "https://bt.nekouwugamerfnf.dev"
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -98,9 +98,9 @@ async def on_ready():
 
 status_index = 0
 statuses = [
-    lambda total_guilds: discord.Game(name=f"I'm In {total_guilds} Discord Servers"),
-    lambda: discord.Game(name="Okudai Is Very Cool"),
-    lambda: discord.Game(name=f"Check Player Stats On {NUTONE_WEBSITE}")
+    lambda total_members, total_guilds: discord.Game(name=f"I'm In {total_guilds} Discord Servers"),
+    lambda total_members, total_guilds: discord.Game(name="Okudai Is Very Cool"),
+    lambda total_members, total_guilds: discord.Game(name=f"Check Player Stats On {NUTONE_WEBSITE}")
 ]
 
 @tasks.loop(minutes=1)

@@ -8,7 +8,7 @@ import random
 import asyncio
 from dotenv import load_dotenv
 
-NUTONE_WEBSITE = "https://bt.nekouwugamerfnf.dev"
+NUTONE_WEBSITE = "https://nutone.okudai.dev/v1"
 
 intents = discord.Intents.default()
 intents.message_content = True

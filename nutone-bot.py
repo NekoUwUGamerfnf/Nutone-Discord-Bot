@@ -263,10 +263,9 @@ async def stats(interaction: discord.Interaction, player: str = None, server_id:
     if server_id:
         data = await fetch_stats(interaction, player, server_id, ephemeral)
         if data:
-            total_stats = data.get('total', {})
-            kills = total_stats.get('kills', 'N/A')
-            deaths = total_stats.get('deaths', 'N/A')
-            kd_ratio = total_stats.get('kd', 'N/A')
+            kills = data.get('kills', 'N/A')
+            deaths = data.get('deaths', 'N/A')
+            kd_ratio = data.get('kd', 'N/A')
 
             embed = discord.Embed(
                 title=f"Stats For {player} On Server {server_id}",
@@ -281,10 +280,9 @@ async def stats(interaction: discord.Interaction, player: str = None, server_id:
         for sid in available_server_ids:
             data = await fetch_stats(interaction, player, sid, ephemeral)
             if data:
-                total_stats = data.get('total', {})
-                kills = total_stats.get('kills', 'N/A')
-                deaths = total_stats.get('deaths', 'N/A')
-                kd_ratio = total_stats.get('kd', 'N/A')
+                kills = data.get('kills', 'N/A')
+                deaths = data.get('deaths', 'N/A')
+                kd_ratio = data.get('kd', 'N/A')
 
                 embed = discord.Embed(
                     title=f"Stats For {player} On Server {sid}",
@@ -313,8 +311,7 @@ async def kd(interaction: discord.Interaction, player: str = None, server_id: st
     if server_id:
         data = await fetch_stats(interaction, player, server_id, ephemeral)
         if data:
-            total_stats = data.get('total', {})
-            kd_ratio = total_stats.get('kd', 'N/A')
+            kd_ratio = data.get('kd', 'N/A')
 
             embed = discord.Embed(
                 title=f"K/D Ratio For {player} On Server {server_id}",
@@ -327,8 +324,7 @@ async def kd(interaction: discord.Interaction, player: str = None, server_id: st
         for sid in available_server_ids:
             data = await fetch_stats(interaction, player, sid, ephemeral)
             if data:
-                total_stats = data.get('total', {})
-                kd_ratio = total_stats.get('kd', 'N/A')
+                kd_ratio = data.get('kd', 'N/A')
 
                 embed = discord.Embed(
                     title=f"K/D Ratio For {player} On Server {sid}",
@@ -865,8 +861,7 @@ async def kduser(interaction: discord.Interaction, user: discord.User, server_id
     if server_id:
         data = await fetch_stats(interaction, player, server_id, ephemeral)
         if data:
-            total_stats = data.get('total', {})
-            kd_ratio = total_stats.get('kd', 'N/A')
+            kd_ratio = data.get('kd', 'N/A')
 
             embed = discord.Embed(
                 title=f"K/D Ratio For {player} On Server {server_id}",
@@ -879,8 +874,7 @@ async def kduser(interaction: discord.Interaction, user: discord.User, server_id
         for sid in available_server_ids:
             data = await fetch_stats(interaction, player, sid, ephemeral)
             if data:
-                total_stats = data.get('total', {})
-                kd_ratio = total_stats.get('kd', 'N/A')
+                kd_ratio = data.get('kd', 'N/A')
 
                 embed = discord.Embed(
                     title=f"K/D Ratio For {player} On Server {sid}",

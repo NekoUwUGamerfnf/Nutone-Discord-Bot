@@ -269,7 +269,7 @@ async def stats(interaction: discord.Interaction, player: str = None, server_id:
 
             embed = discord.Embed(
                 title=f"Stats For {player} On Server {server_id}",
-                color=discord.Color.blue()
+                color=discord.Color.green()
             )
             embed.add_field(name="Kills", value=kills, inline=True)
             embed.add_field(name="Deaths", value=deaths, inline=True)
@@ -286,7 +286,7 @@ async def stats(interaction: discord.Interaction, player: str = None, server_id:
 
                 embed = discord.Embed(
                     title=f"Stats For {player} On Server {sid}",
-                    color=discord.Color.blue()
+                    color=discord.Color.green()
                 )
                 embed.add_field(name="Kills", value=kills, inline=True)
                 embed.add_field(name="Deaths", value=deaths, inline=True)
@@ -315,7 +315,7 @@ async def kd(interaction: discord.Interaction, player: str = None, server_id: st
 
             embed = discord.Embed(
                 title=f"K/D Ratio For {player} On Server {server_id}",
-                color=discord.Color.blue()
+                color=discord.Color.green()
             )
             embed.add_field(name="K/D Ratio", value=kd_ratio, inline=True)
 
@@ -328,7 +328,7 @@ async def kd(interaction: discord.Interaction, player: str = None, server_id: st
 
                 embed = discord.Embed(
                     title=f"K/D Ratio For {player} On Server {sid}",
-                    color=discord.Color.blue()
+                    color=discord.Color.green()
                 )
                 embed.add_field(name="K/D Ratio", value=kd_ratio, inline=True)
 
@@ -373,7 +373,7 @@ async def alias(interaction: discord.Interaction, player: str = None):
 
     embed = discord.Embed(
         title=f"Aliases For {current_name}",
-        color=discord.Color.blue()
+        color=discord.Color.green()
     )
     embed.add_field(name="Current Name", value=current_name, inline=False)
     
@@ -755,7 +755,7 @@ async def rps(interaction: discord.Interaction, choice: str):
 
     embed = discord.Embed(
         title="Rock-Paper-Scissors",
-        color=discord.Color.blue()
+        color=discord.Color.green()
     )
     if choice.lower() != newchoice.lower():
         embed.add_field(name="Your Choice", value=f"{newchoice} (Random)", inline=True)
@@ -775,7 +775,7 @@ async def coinflip(interaction: discord.Interaction):
     
     embed = discord.Embed(
         title="Coin Flip",
-        color=discord.Color.gold()
+        color=discord.Color.green()
     )
     embed.add_field(name="Result", value=result, inline=False)
     
@@ -865,7 +865,7 @@ async def kduser(interaction: discord.Interaction, user: discord.User, server_id
 
             embed = discord.Embed(
                 title=f"K/D Ratio For {player} On Server {server_id}",
-                color=discord.Color.blue()
+                color=discord.Color.green()
             )
             embed.add_field(name="K/D Ratio", value=kd_ratio, inline=True)
 
@@ -878,7 +878,7 @@ async def kduser(interaction: discord.Interaction, user: discord.User, server_id
 
                 embed = discord.Embed(
                     title=f"K/D Ratio For {player} On Server {sid}",
-                    color=discord.Color.blue()
+                    color=discord.Color.green()
                 )
                 embed.add_field(name="K/D Ratio", value=kd_ratio, inline=True)
 
